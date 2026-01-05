@@ -204,11 +204,18 @@ export default function Settings() {
 
     setDeletingUserId(userId);
     try {
-      const response = await supabase.functions.invoke('delete-user', {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
         body: { userId },
       });
 
-      if (response.error) throw response.error;
+      if (error) {
+        console.error('Delete user error:', error);
+        throw new Error(error.message || 'Failed to delete user');
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       toast({
         title: 'User Deleted',
@@ -216,6 +223,7 @@ export default function Settings() {
       });
       fetchUsers();
     } catch (error: any) {
+      console.error('Delete user catch:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete user',
