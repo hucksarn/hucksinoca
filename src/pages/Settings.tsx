@@ -319,7 +319,7 @@ export default function Settings() {
                         }`}>
                           {u.role === 'admin' ? 'Admin' : 'User'}
                         </span>
-                        {u.id !== user?.id && (
+                        {u.id !== user?.id && u.designation !== 'System Admin' && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -333,6 +333,9 @@ export default function Settings() {
                               <Trash2 className="h-4 w-4" />
                             )}
                           </Button>
+                        )}
+                        {u.designation === 'System Admin' && u.id !== user?.id && (
+                          <span className="text-xs text-muted-foreground">Protected</span>
                         )}
                       </div>
                     </div>

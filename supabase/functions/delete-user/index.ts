@@ -73,6 +73,20 @@ serve(async (req) => {
       );
     }
 
+    // Check if target is System Admin (protected)
+    const { data: targetProfile } = await supabase
+      .from("profiles")
+      .select("designation")
+      .eq("user_id", userId)
+      .single();
+
+    if (targetProfile?.designation === "System Admin") {
+      return new Response(
+        JSON.stringify({ error: "System Admin cannot be deleted" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Delete the user (this will cascade delete profile and roles due to foreign keys)
     const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
 
