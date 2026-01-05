@@ -210,6 +210,10 @@ export function useCreateMaterialRequest() {
       items: Omit<MaterialRequestItem, 'id' | 'request_id'>[];
       status: 'draft' | 'submitted';
     }) => {
+      if (!user) {
+        throw new Error('You must be logged in to create a request');
+      }
+      
       // Always create request as 'draft' first so items can be added (RLS policy requirement)
       const { data: request, error: requestError } = await supabase
         .from('material_requests')
@@ -219,9 +223,10 @@ export function useCreateMaterialRequest() {
           priority,
           required_date: requiredDate || null,
           remarks,
-          requester_id: user!.id,
+          requester_id: user.id,
+          request_number: 'TEMP', // Will be replaced by trigger
           status: 'draft', // Always start as draft
-        } as any)
+        })
         .select()
         .single();
       
