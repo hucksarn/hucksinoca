@@ -40,7 +40,7 @@ import {
   Plus,
   Loader2,
   Trash2,
-  UserCog
+  Pencil
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -89,6 +89,17 @@ export default function Settings() {
     fullName: '',
     designation: 'Site Supervisor',
   });
+
+  // Edit user state
+  const [showEditUser, setShowEditUser] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserWithProfile | null>(null);
+  const [editUserData, setEditUserData] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    designation: '',
+  });
+  const [updatingUser, setUpdatingUser] = useState(false);
 
   const designations = [
     'System Admin',
@@ -243,6 +254,81 @@ export default function Settings() {
     }
   };
 
+  const handleEditUser = (userToEdit: UserWithProfile) => {
+    setEditingUser(userToEdit);
+    setEditUserData({
+      email: userToEdit.email || '',
+      password: '',
+      fullName: userToEdit.full_name,
+      designation: userToEdit.designation,
+    });
+    setShowEditUser(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    // Validate inputs
+    try {
+      if (editUserData.email) {
+        emailSchema.parse(editUserData.email);
+      }
+      if (editUserData.password) {
+        passwordSchema.parse(editUserData.password);
+      }
+      if (!editUserData.fullName.trim()) {
+        throw new Error('Full name is required');
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast({ title: 'Validation Error', description: err.errors[0].message, variant: 'destructive' });
+        return;
+      }
+      if (err instanceof Error) {
+        toast({ title: 'Validation Error', description: err.message, variant: 'destructive' });
+        return;
+      }
+    }
+
+    setUpdatingUser(true);
+    try {
+      const role = designationRoleMap[editUserData.designation] || 'user';
+      
+      const { data, error } = await supabase.functions.invoke('update-user', {
+        body: {
+          userId: editingUser.id,
+          email: editUserData.email || undefined,
+          password: editUserData.password || undefined,
+          fullName: editUserData.fullName,
+          designation: editUserData.designation,
+          role: role,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: 'User Updated',
+        description: editUserData.password 
+          ? `${editUserData.fullName} updated. They must change password on next login.`
+          : `${editUserData.fullName} has been updated.`,
+      });
+
+      setShowEditUser(false);
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingUser(false);
+    }
+  };
+
   const handleSave = () => {
     toast({
       title: 'Settings saved',
@@ -320,7 +406,7 @@ export default function Settings() {
                           <p className="text-sm text-muted-foreground">{u.designation}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           u.role === 'admin' 
                             ? 'bg-primary/10 text-primary' 
@@ -328,6 +414,20 @@ export default function Settings() {
                         }`}>
                           {u.role === 'admin' ? 'Admin' : 'User'}
                         </span>
+                        
+                        {/* Edit button - show for all except System Admin (unless you ARE System Admin) */}
+                        {(u.designation !== 'System Admin' || profile?.designation === 'System Admin') && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleEditUser(u)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {/* Delete button - not for self or System Admin */}
                         {u.id !== user?.id && u.designation !== 'System Admin' && (
                           <Button
                             variant="ghost"
@@ -343,7 +443,8 @@ export default function Settings() {
                             )}
                           </Button>
                         )}
-                        {u.designation === 'System Admin' && u.id !== user?.id && (
+                        
+                        {u.designation === 'System Admin' && u.id !== user?.id && profile?.designation !== 'System Admin' && (
                           <span className="text-xs text-muted-foreground">Protected</span>
                         )}
                       </div>
@@ -640,6 +741,90 @@ export default function Settings() {
                 <>
                   <Plus className="h-4 w-4 mr-2" />
                   Create User
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditUser} onOpenChange={setShowEditUser}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user details. Leave password empty to keep current password.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editUserName">Full Name *</Label>
+              <Input
+                id="editUserName"
+                value={editUserData.fullName}
+                onChange={(e) => setEditUserData({ ...editUserData, fullName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editUserEmail">Email</Label>
+              <Input
+                id="editUserEmail"
+                type="email"
+                placeholder="Leave empty to keep current"
+                value={editUserData.email}
+                onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editUserPassword">New Password</Label>
+              <Input
+                id="editUserPassword"
+                type="password"
+                placeholder="Leave empty to keep current"
+                value={editUserData.password}
+                onChange={(e) => setEditUserData({ ...editUserData, password: e.target.value })}
+              />
+              {editUserData.password && (
+                <p className="text-xs text-warning">User will be required to change password on next login</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editUserDesignation">Designation</Label>
+              <Select 
+                value={editUserData.designation} 
+                onValueChange={(v) => setEditUserData({ ...editUserData, designation: v })}
+                disabled={editingUser?.designation === 'System Admin'}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {designations.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d} {designationRoleMap[d] === 'admin' ? '(Admin)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditUser(false)} disabled={updatingUser}>
+              Cancel
+            </Button>
+            <Button variant="accent" onClick={handleUpdateUser} disabled={updatingUser}>
+              {updatingUser ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
                 </>
               )}
             </Button>
