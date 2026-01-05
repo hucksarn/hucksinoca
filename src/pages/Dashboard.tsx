@@ -1,28 +1,20 @@
 import { MainLayout } from '@/components/layout/MainLayout';
-import { MetricCard } from '@/components/dashboard/MetricCard';
 import { RequestsTable } from '@/components/dashboard/RequestsTable';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { ProjectOverview } from '@/components/dashboard/ProjectOverview';
 import { Button } from '@/components/ui/button';
-import { Plus, ClipboardList, CheckSquare, Package, AlertTriangle, Loader2 } from 'lucide-react';
+import { Plus, CheckSquare, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useMaterialRequests, useDashboardMetrics } from '@/hooks/useDatabase';
+import { useMaterialRequests } from '@/hooks/useDatabase';
 import { useAuth } from '@/hooks/useAuth';
-
-const metricIcons = [ClipboardList, CheckSquare, Package, AlertTriangle];
 
 export default function Dashboard() {
   const { isAdmin } = useAuth();
   const { data: requests = [], isLoading: requestsLoading } = useMaterialRequests();
-  const { data: metrics = [], isLoading: metricsLoading } = useDashboardMetrics();
-
-  const pendingRequests = requests.filter(
-    r => r.status === 'submitted' || r.status === 'pm_approved'
-  );
 
   const pendingCount = requests.filter(r => r.status === 'submitted').length;
 
-  if (requestsLoading || metricsLoading) {
+  if (requestsLoading) {
     return (
       <MainLayout title="Dashboard" subtitle="Overview of your procurement activities">
         <div className="flex items-center justify-center h-64">
@@ -60,17 +52,6 @@ export default function Dashboard() {
             </Button>
           </Link>
         )}
-      </div>
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {metrics.map((metric, index) => (
-          <MetricCard
-            key={metric.label}
-            {...metric}
-            icon={metricIcons[index]}
-          />
-        ))}
       </div>
 
       {/* Main Content Grid */}
