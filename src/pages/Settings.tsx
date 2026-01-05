@@ -118,43 +118,20 @@ export default function Settings() {
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      // Get all profiles with their roles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, designation');
+      // Use edge function to get users with emails
+      const { data, error } = await supabase.functions.invoke('list-users');
 
-      if (profilesError) throw profilesError;
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) throw rolesError;
-
-      // We need to get emails from a different approach since we can't query auth.users directly
-      // For now, we'll show what we have from profiles
-      const roleMap = new Map(roles?.map(r => [r.user_id, r.role]) || []);
-      
-      // Filter out System Admin from the list (only System Admin can see themselves)
-      const filteredProfiles = (profiles || []).filter(p => {
-        // System Admin is hidden from other users
-        if (p.designation === 'System Admin' && p.user_id !== user?.id) {
-          return false;
-        }
-        return true;
-      });
-      
-      const userList: UserWithProfile[] = filteredProfiles.map(p => ({
-        id: p.user_id,
-        email: '', // Will be fetched separately or shown as "Hidden"
-        full_name: p.full_name,
-        designation: p.designation,
-        role: (roleMap.get(p.user_id) || 'user') as 'admin' | 'user',
-      }));
-
-      setUsers(userList);
+      setUsers(data.users || []);
     } catch (error: any) {
       console.error('Error fetching users:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load users',
+        variant: 'destructive',
+      });
     } finally {
       setLoadingUsers(false);
     }
@@ -403,7 +380,8 @@ export default function Settings() {
                         </div>
                         <div>
                           <p className="font-medium text-foreground">{u.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{u.designation}</p>
+                          <p className="text-sm text-muted-foreground">{u.email}</p>
+                          <p className="text-xs text-muted-foreground/70">{u.designation}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
