@@ -4,7 +4,7 @@ project_id = "odijuvcwgjvevivkxofd"
 verify_jwt = false
 
 [functions.create-user]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-user]
-verify_jwt = true
+verify_jwt = false
