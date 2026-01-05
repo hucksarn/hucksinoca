@@ -51,13 +51,17 @@ export function Sidebar() {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'New Request', href: '/requests/new', icon: Plus },
-    { name: 'My Requests', href: '/requests', icon: FileText },
+    { name: 'New Request', href: '/requests/new', icon: Plus, userOnly: true },
+    { name: 'My Requests', href: '/requests', icon: FileText, userOnly: true },
     { name: 'Approvals', href: '/approvals', icon: CheckSquare, adminOnly: true, badge: pendingCount },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
-  const filteredNavigation = navigation.filter(item => !item.adminOnly || isAdmin);
+  const filteredNavigation = navigation.filter(item => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.userOnly && isAdmin) return false;
+    return true;
+  });
 
   const handleAddProject = async () => {
     if (!newProjectName.trim() || !newProjectLocation.trim()) {
