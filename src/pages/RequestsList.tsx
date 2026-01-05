@@ -13,6 +13,7 @@ import {
 import { Plus, Search, Filter, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMaterialRequests, useProjects } from '@/hooks/useDatabase';
+import { useAuth } from '@/hooks/useAuth';
 
 type StatusFilter = 'all' | 'draft' | 'submitted' | 'pm_approved' | 'pm_rejected' | 'closed';
 
@@ -21,6 +22,7 @@ export default function RequestsList() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
 
+  const { isAdmin } = useAuth();
   const { data: requests = [], isLoading: requestsLoading } = useMaterialRequests();
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
 
@@ -38,7 +40,7 @@ export default function RequestsList() {
 
   if (requestsLoading || projectsLoading) {
     return (
-      <MainLayout title="Material Requests" subtitle="View and manage all material requests">
+      <MainLayout title={isAdmin ? "All Requests" : "My Requests"} subtitle="View and manage material requests">
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -48,17 +50,19 @@ export default function RequestsList() {
 
   return (
     <MainLayout 
-      title="Material Requests" 
-      subtitle="View and manage all material requests"
+      title={isAdmin ? "All Requests" : "My Requests"}
+      subtitle="View and manage material requests"
     >
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <Link to="/requests/new">
-          <Button variant="accent" className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Request
-          </Button>
-        </Link>
+        {!isAdmin && (
+          <Link to="/requests/new">
+            <Button variant="accent" className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Request
+            </Button>
+          </Link>
+        )}
         
         <div className="flex-1 flex flex-col sm:flex-row gap-3">
           {/* Search */}

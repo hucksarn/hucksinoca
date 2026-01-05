@@ -39,12 +39,14 @@ export default function Dashboard() {
     >
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3 mb-6">
-        <Link to="/requests/new">
-          <Button variant="accent" className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Request
-          </Button>
-        </Link>
+        {!isAdmin && (
+          <Link to="/requests/new">
+            <Button variant="accent" className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Request
+            </Button>
+          </Link>
+        )}
         {isAdmin && (
           <Link to="/approvals">
             <Button variant="outline" className="gap-2">
