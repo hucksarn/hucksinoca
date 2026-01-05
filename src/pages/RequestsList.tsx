@@ -54,35 +54,35 @@ export default function RequestsList() {
       subtitle="View and manage material requests"
     >
       {/* Header Actions */}
-      <div className="space-y-3 mb-4 md:mb-6">
+      <div className="space-y-2 mb-3 md:mb-6">
         {/* New Request Button */}
         {!isAdmin && (
           <Link to="/requests/new">
-            <Button variant="accent" size="sm" className="gap-2 md:h-10 md:px-4">
-              <Plus className="h-4 w-4" />
+            <Button variant="accent" size="sm" className="gap-1.5 h-8 text-xs md:h-10 md:text-sm">
+              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
               New Request
             </Button>
           </Link>
         )}
         
         {/* Search and Filters */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {/* Search */}
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
             <Input
-              placeholder="Search requests..."
+              placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full"
+              className="pl-8 h-8 text-xs md:h-10 md:text-sm md:pl-10 w-full"
             />
           </div>
 
           {/* Filters */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-2">
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-              <SelectTrigger className="w-[130px] md:w-[160px] shrink-0">
-                <Filter className="h-4 w-4 mr-1 md:mr-2" />
+              <SelectTrigger className="flex-1 h-8 text-xs md:h-10 md:text-sm">
+                <Filter className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -96,7 +96,7 @@ export default function RequestsList() {
             </Select>
 
             <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger className="w-[130px] md:w-[180px] shrink-0">
+              <SelectTrigger className="flex-1 h-8 text-xs md:h-10 md:text-sm">
                 <SelectValue placeholder="Project" />
               </SelectTrigger>
               <SelectContent>
@@ -113,8 +113,8 @@ export default function RequestsList() {
       </div>
 
       {/* Results Count */}
-      <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
-        Showing {filteredRequests.length} of {requests.length} requests
+      <p className="text-[10px] md:text-sm text-muted-foreground mb-2 md:mb-4">
+        {filteredRequests.length} of {requests.length} requests
       </p>
 
       {/* Table */}

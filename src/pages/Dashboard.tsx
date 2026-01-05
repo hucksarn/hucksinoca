@@ -30,24 +30,22 @@ export default function Dashboard() {
       subtitle="Overview of your procurement activities"
     >
       {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2 md:gap-3 mb-4 md:mb-6">
+      <div className="flex flex-wrap gap-2 mb-3 md:mb-6">
         {!isAdmin && (
           <Link to="/requests/new">
-            <Button variant="accent" size="sm" className="gap-2 md:h-10 md:px-4 md:py-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New Request</span>
-              <span className="sm:hidden">New</span>
+            <Button variant="accent" size="sm" className="gap-1.5 h-8 text-xs md:h-10 md:text-sm md:px-4">
+              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              New Request
             </Button>
           </Link>
         )}
         {isAdmin && (
           <Link to="/approvals">
-            <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4 md:py-2">
-              <CheckSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Pending Approvals</span>
-              <span className="sm:hidden">Approvals</span>
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs md:h-10 md:text-sm md:px-4">
+              <CheckSquare className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              Pending Approvals
               {pendingCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-xs font-medium">
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[10px] md:text-xs font-medium">
                   {pendingCount}
                 </span>
               )}
@@ -57,22 +55,22 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
         {/* Requests Table */}
-        <div className="lg:col-span-2 space-y-3 md:space-y-4">
+        <div className="lg:col-span-2 space-y-2 md:space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base md:text-lg font-semibold text-foreground">
+            <h2 className="text-sm md:text-lg font-semibold text-foreground">
               {isAdmin ? 'All Requests' : 'My Requests'}
             </h2>
             <Link to="/requests">
-              <Button variant="ghost" size="sm">View All</Button>
+              <Button variant="ghost" size="sm" className="h-7 text-xs md:h-9 md:text-sm">View All</Button>
             </Link>
           </div>
           <RequestsTable requests={requests.slice(0, 5)} />
         </div>
 
-        {/* Sidebar - hidden on mobile, shown below on tablet */}
-        <div className="space-y-4 md:space-y-6">
+        {/* Sidebar widgets */}
+        <div className="space-y-3 md:space-y-6">
           <RecentActivity />
           <ProjectOverview />
         </div>

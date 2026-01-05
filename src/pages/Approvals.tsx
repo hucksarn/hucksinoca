@@ -130,33 +130,33 @@ export default function Approvals() {
       subtitle="Review and approve material requests"
     >
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-6">
-        <div className="p-3 md:p-4 rounded-xl bg-warning/10 border border-warning/20">
-          <div className="flex items-center gap-2 md:gap-3">
-            <Clock className="h-4 w-4 md:h-5 md:w-5 text-warning shrink-0" />
+      <div className="grid grid-cols-3 gap-2 mb-3 md:mb-6">
+        <div className="p-2 md:p-4 rounded-lg md:rounded-xl bg-warning/10 border border-warning/20">
+          <div className="flex items-center gap-1.5 md:gap-3">
+            <Clock className="h-4 w-4 text-warning shrink-0" />
             <div className="min-w-0">
-              <p className="text-lg md:text-2xl font-bold text-foreground">{pendingRequests.length}</p>
-              <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
+              <p className="text-base md:text-2xl font-bold text-foreground">{pendingRequests.length}</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground">Pending</p>
             </div>
           </div>
         </div>
-        <div className="p-3 md:p-4 rounded-xl bg-destructive/10 border border-destructive/20">
-          <div className="flex items-center gap-2 md:gap-3">
-            <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-destructive shrink-0" />
+        <div className="p-2 md:p-4 rounded-lg md:rounded-xl bg-destructive/10 border border-destructive/20">
+          <div className="flex items-center gap-1.5 md:gap-3">
+            <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
             <div className="min-w-0">
-              <p className="text-lg md:text-2xl font-bold text-foreground">
+              <p className="text-base md:text-2xl font-bold text-foreground">
                 {pendingRequests.filter(r => r.priority === 'urgent').length}
               </p>
-              <p className="text-xs md:text-sm text-muted-foreground">Urgent</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground">Urgent</p>
             </div>
           </div>
         </div>
-        <div className="p-3 md:p-4 rounded-xl bg-success/10 border border-success/20">
-          <div className="flex items-center gap-2 md:gap-3">
-            <Check className="h-4 w-4 md:h-5 md:w-5 text-success shrink-0" />
+        <div className="p-2 md:p-4 rounded-lg md:rounded-xl bg-success/10 border border-success/20">
+          <div className="flex items-center gap-1.5 md:gap-3">
+            <Check className="h-4 w-4 text-success shrink-0" />
             <div className="min-w-0">
-              <p className="text-lg md:text-2xl font-bold text-foreground">-</p>
-              <p className="text-xs md:text-sm text-muted-foreground truncate">Approved</p>
+              <p className="text-base md:text-2xl font-bold text-foreground">-</p>
+              <p className="text-[10px] md:text-sm text-muted-foreground truncate">Done</p>
             </div>
           </div>
         </div>
@@ -167,78 +167,71 @@ export default function Approvals() {
         {pendingRequests.map((request, index) => (
           <div 
             key={request.id}
-            className="bg-card rounded-xl border border-border p-4 md:p-6 animate-slide-up"
+            className="bg-card rounded-lg border border-border p-3 md:p-6 animate-slide-up"
             style={{ animationDelay: `${index * 50}ms` }}
           >
-            <div className="space-y-4">
+            <div className="space-y-2 md:space-y-4">
               {/* Request Info */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <span className="text-base md:text-lg font-semibold text-foreground">
+                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                    <span className="text-sm md:text-lg font-semibold text-foreground">
                       {request.request_number}
                     </span>
                     <StatusBadge status={request.status as any} />
                     {request.priority === 'urgent' && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-xs font-medium">
-                        <AlertTriangle className="h-3 w-3" />
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-medium">
+                        <AlertTriangle className="h-2.5 w-2.5" />
                         Urgent
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-4 text-sm">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 md:gap-4 text-xs md:text-sm">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Building2 className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                     <span className="text-foreground truncate">{request.project_name}</span>
                   </div>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <User className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                     <span className="text-foreground truncate">{request.requester_name}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex items-center gap-1.5 col-span-2 md:col-span-1">
+                    <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                     <span className="text-foreground">
                       {requestItems[request.id]?.length || 0} items
                     </span>
+                    <span className="text-muted-foreground text-[10px] md:text-xs ml-auto md:ml-0">
+                      {format(new Date(request.created_at), 'MMM d')}
+                    </span>
                   </div>
-                </div>
-
-                {request.remarks && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {request.remarks}
-                  </p>
-                )}
-
-                <div className="text-xs text-muted-foreground">
-                  Submitted {format(new Date(request.created_at), 'MMM d, yyyy')}
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 pt-3 border-t border-border">
+              <div className="flex items-center gap-2 pt-2 border-t border-border">
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => handleAction(request, 'reject')}
-                  className="flex-1 sm:flex-none text-destructive border-destructive/30 hover:bg-destructive/10"
+                  className="flex-1 h-7 md:h-9 text-xs md:text-sm text-destructive border-destructive/30 hover:bg-destructive/10"
                 >
-                  <X className="h-4 w-4 mr-1" />
+                  <X className="h-3.5 w-3.5 mr-1" />
                   Reject
                 </Button>
                 <Button 
                   variant="success" 
                   size="sm"
                   onClick={() => handleAction(request, 'approve')}
-                  className="flex-1 sm:flex-none"
+                  className="flex-1 h-7 md:h-9 text-xs md:text-sm"
                 >
-                  <Check className="h-4 w-4 mr-1" />
+                  <Check className="h-3.5 w-3.5 mr-1" />
                   Approve
                 </Button>
                 <Link to={`/requests/${request.id}`}>
-                  <Button variant="ghost" size="icon" className="shrink-0">
-                    <Eye className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 md:h-9 md:w-9 shrink-0">
+                    <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </Button>
                 </Link>
               </div>

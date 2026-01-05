@@ -56,21 +56,21 @@ export function RequestsTable({ requests, showActions = true }: RequestsTablePro
     }
   };
 
-  // Mobile card view
+  // Mobile card view - compact
   const MobileCard = ({ request }: { request: MaterialRequest }) => (
-    <div className="bg-card rounded-lg border border-border p-4 space-y-3">
+    <div className="bg-card rounded-lg border border-border p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-foreground">{request.request_number}</p>
-          <p className="text-sm text-muted-foreground truncate">{request.project_name}</p>
+          <p className="text-sm font-semibold text-foreground">{request.request_number}</p>
+          <p className="text-xs text-muted-foreground truncate">{request.project_name}</p>
         </div>
         <StatusBadge status={request.status as any} />
       </div>
       
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
           {request.priority === 'urgent' && (
-            <span className="inline-flex items-center gap-1 text-warning font-medium">
+            <span className="inline-flex items-center gap-0.5 text-warning font-medium">
               <AlertTriangle className="h-3 w-3" />
               Urgent
             </span>
@@ -83,7 +83,7 @@ export function RequestsTable({ requests, showActions = true }: RequestsTablePro
         </div>
       </div>
 
-      <div className="text-sm">
+      <div className="text-xs">
         <span className="text-muted-foreground">By: </span>
         <span className="text-foreground">{request.requester_name}</span>
       </div>
@@ -91,8 +91,8 @@ export function RequestsTable({ requests, showActions = true }: RequestsTablePro
       {showActions && (
         <div className="flex items-center gap-2 pt-2 border-t border-border">
           <Link to={`/requests/${request.id}`} className="flex-1">
-            <Button variant="outline" size="sm" className="w-full">
-              <Eye className="h-4 w-4 mr-1" />
+            <Button variant="outline" size="sm" className="w-full h-7 text-xs">
+              <Eye className="h-3.5 w-3.5 mr-1" />
               View
             </Button>
           </Link>
@@ -102,28 +102,28 @@ export function RequestsTable({ requests, showActions = true }: RequestsTablePro
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  className="h-7 w-7 p-0 text-destructive border-destructive/30 hover:bg-destructive/10"
                   disabled={deletingId === request.id}
                 >
                   {deletingId === request.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   )}
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="mx-3 max-w-[calc(100vw-24px)]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Request</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete {request.request_number}? This action cannot be undone.
+                  <AlertDialogTitle className="text-base">Delete Request</AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm">
+                    Delete {request.request_number}? This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="gap-2">
+                  <AlertDialogCancel className="h-8 text-xs">Cancel</AlertDialogCancel>
                   <AlertDialogAction 
                     onClick={() => handleDelete(request)}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    className="h-8 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
                     Delete
                   </AlertDialogAction>
