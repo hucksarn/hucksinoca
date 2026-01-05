@@ -23,34 +23,34 @@ serve(async (req) => {
     });
 
     const body = await req.json().catch(() => ({}));
-    const action = body.action || 'create';
+    const { email, password } = body;
 
-    // Check if admin already exists
-    const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const existingAdmin = existingUsers?.users?.find(
-      (u) => u.email === "admin@buildflow.com"
-    );
-
-    if (action === 'reset' && existingAdmin) {
-      // Delete existing admin
-      await supabase.auth.admin.deleteUser(existingAdmin.id);
-    } else if (action === 'create' && existingAdmin) {
+    if (!email || !password) {
       return new Response(
-        JSON.stringify({ message: "Admin user already exists. Use action: 'reset' to recreate.", created: false }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({ error: "Email and password are required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Create default admin user
+    // Check if this is the first user (no users exist)
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    if (existingUsers?.users && existingUsers.users.length > 0) {
+      return new Response(
+        JSON.stringify({ error: "Initial admin already exists. Use the app to create more users." }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Create initial admin user
     const { data: user, error: createError } = await supabase.auth.admin.createUser({
-      email: "admin@buildflow.com",
-      password: "admin123",
+      email,
+      password,
       email_confirm: true,
       user_metadata: {
         full_name: "System Admin",
         designation: "Procurement Manager",
         role: "admin",
-        must_change_password: true,
+        must_change_password: false,
       },
     });
 
@@ -58,20 +58,10 @@ serve(async (req) => {
       throw createError;
     }
 
-    // Update the profile to set must_change_password
-    if (user?.user) {
-      await supabase
-        .from("profiles")
-        .update({ must_change_password: true })
-        .eq("user_id", user.user.id);
-    }
-
     return new Response(
       JSON.stringify({ 
-        message: "Default admin created successfully", 
-        created: true,
-        email: "admin@buildflow.com",
-        password: "admin123 (must change on first login)"
+        message: "Initial admin created successfully", 
+        email: email,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
