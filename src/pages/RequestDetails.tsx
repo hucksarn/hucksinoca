@@ -1,11 +1,22 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Trash2 } from 'lucide-react';
-import { useMaterialRequests, useMaterialRequestItems, useDeleteMaterialRequest } from '@/hooks/useDatabase';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Loader2, ArrowLeft, Trash2, Check } from 'lucide-react';
+import { useMaterialRequests, useMaterialRequestItems, useDeleteMaterialRequest, useApproveRequest } from '@/hooks/useDatabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import {
   AlertDialog,
@@ -19,6 +30,14 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -31,9 +50,16 @@ const RequestDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin, profile, user } = useAuth();
+  const { toast } = useToast();
   const { data: requests, isLoading: requestsLoading } = useMaterialRequests();
   const { data: items, isLoading: itemsLoading } = useMaterialRequestItems(id || '');
   const deleteMutation = useDeleteMaterialRequest();
+  const approveRequest = useApproveRequest();
+
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [approveComment, setApproveComment] = useState('');
+  const [requestType, setRequestType] = useState<'stock_request' | 'purchase_request'>('stock_request');
+  const [isApproving, setIsApproving] = useState(false);
 
   const request = requests?.find(r => r.id === id);
   
@@ -44,10 +70,39 @@ const RequestDetails = () => {
     (request.requester_id === user?.id && ['draft', 'submitted'].includes(request.status))
   );
 
+  // Admin can approve submitted requests
+  const canApprove = request && isAdmin && request.status === 'submitted';
+
   const handleDelete = async () => {
     if (!id) return;
     await deleteMutation.mutateAsync(id);
     navigate('/requests');
+  };
+
+  const handleApprove = async () => {
+    if (!id) return;
+    setIsApproving(true);
+    try {
+      await approveRequest.mutateAsync({
+        requestId: id,
+        comment: approveComment || undefined,
+        requestType: requestType,
+      });
+      toast({
+        title: 'Request Approved',
+        description: `${request?.request_number} has been approved.`,
+      });
+      setShowApproveDialog(false);
+      navigate('/requests');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to approve request',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsApproving(false);
+    }
   };
 
   if (requestsLoading || itemsLoading) {
@@ -108,37 +163,93 @@ const RequestDetails = () => {
             Back to Requests
           </Button>
           
-          {canDelete && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Request
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Material Request</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete request {request.request_number}? This action cannot be undone. All items associated with this request will also be deleted.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {deleteMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+          <div className="flex items-center gap-2">
+            {canApprove && (
+              <Button variant="success" onClick={() => setShowApproveDialog(true)}>
+                <Check className="h-4 w-4 mr-2" />
+                Approve
+              </Button>
+            )}
+            {canDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Request
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Material Request</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete request {request.request_number}? This action cannot be undone. All items associated with this request will also be deleted.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deleteMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </div>
+
+        {/* Approve Dialog */}
+        <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Request</DialogTitle>
+              <DialogDescription>
+                Select whether this is a stock request (items available) or purchase request (items need to be purchased).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="requestType">Request Type *</Label>
+                <Select 
+                  value={requestType} 
+                  onValueChange={(v) => setRequestType(v as 'stock_request' | 'purchase_request')}
+                >
+                  <SelectTrigger id="requestType">
+                    <SelectValue placeholder="Select request type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stock_request">Stock Request (Available in stock)</SelectItem>
+                    <SelectItem value="purchase_request">Purchase Request (Need to purchase)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="comment">Comment (optional)</Label>
+                <Textarea
+                  id="comment"
+                  placeholder="Add a comment..."
+                  value={approveComment}
+                  onChange={(e) => setApproveComment(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowApproveDialog(false)} disabled={isApproving}>
+                Cancel
+              </Button>
+              <Button variant="success" onClick={handleApprove} disabled={isApproving}>
+                {isApproving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Confirm Approval
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Request Info */}
         <Card>

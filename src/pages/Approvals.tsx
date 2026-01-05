@@ -24,12 +24,13 @@ import {
   X, 
   Clock, 
   AlertTriangle, 
-  ChevronRight,
+  Eye,
   User,
   Building2,
   Package,
   Loader2
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { usePendingApprovals, useApproveRequest, useRejectRequest, MaterialRequest, useMaterialRequestItems, MaterialRequestItem } from '@/hooks/useDatabase';
 import { useToast } from '@/hooks/use-toast';
@@ -232,9 +233,11 @@ export default function Approvals() {
                   <Check className="h-4 w-4 mr-1" />
                   Approve
                 </Button>
-                <Button variant="ghost" size="icon">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <Link to={`/requests/${request.id}`}>
+                  <Button variant="ghost" size="icon">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
             </div>
 
