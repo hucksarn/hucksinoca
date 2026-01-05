@@ -76,7 +76,9 @@ export default function Dashboard() {
         {/* Pending Requests Table */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Recent Requests</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              {isAdmin ? 'All Requests' : 'My Requests'}
+            </h2>
             <Link to="/requests">
               <Button variant="ghost" size="sm">View All</Button>
             </Link>

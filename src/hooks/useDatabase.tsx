@@ -80,17 +80,22 @@ export function useCreateProject() {
 }
 
 export function useMaterialRequests() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   
   return useQuery({
-    queryKey: ['material_requests', user?.id],
+    queryKey: ['material_requests', user?.id, isAdmin],
     queryFn: async () => {
-      // Get only the current user's requests (My Requests)
-      const { data: requests, error: requestsError } = await supabase
+      // Admins see all requests, users see only their own
+      let query = supabase
         .from('material_requests')
         .select('*')
-        .eq('requester_id', user!.id)
         .order('created_at', { ascending: false });
+      
+      if (!isAdmin) {
+        query = query.eq('requester_id', user!.id);
+      }
+      
+      const { data: requests, error: requestsError } = await query;
       
       if (requestsError) throw requestsError;
 
