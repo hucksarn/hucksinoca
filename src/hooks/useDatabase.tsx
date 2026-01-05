@@ -368,6 +368,7 @@ export function useDeleteMaterialRequest() {
       queryClient.invalidateQueries({ queryKey: ['material_requests'] });
       queryClient.invalidateQueries({ queryKey: ['pending_approvals'] });
       queryClient.invalidateQueries({ queryKey: ['pending_count'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_metrics'] });
     },
   });
 }
