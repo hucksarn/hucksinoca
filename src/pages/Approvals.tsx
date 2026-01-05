@@ -3,6 +3,14 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -25,9 +33,11 @@ import {
 import { format } from 'date-fns';
 import { usePendingApprovals, useApproveRequest, useRejectRequest, MaterialRequest, useMaterialRequestItems, MaterialRequestItem } from '@/hooks/useDatabase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Approvals() {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const { data: pendingRequests = [], isLoading } = usePendingApprovals();
   const approveRequest = useApproveRequest();
   const rejectRequest = useRejectRequest();
@@ -35,8 +45,12 @@ export default function Approvals() {
   const [selectedRequest, setSelectedRequest] = useState<MaterialRequest | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [comment, setComment] = useState('');
+  const [requestType, setRequestType] = useState<'stock_request' | 'purchase_request' | ''>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [requestItems, setRequestItems] = useState<Record<string, MaterialRequestItem[]>>({});
+
+  // Check if current user is a Procurement Manager
+  const isProcurementManager = profile?.designation === 'Procurement Manager' || profile?.designation === 'System Admin';
 
   // Fetch items for all pending requests
   useEffect(() => {
@@ -65,6 +79,7 @@ export default function Approvals() {
     setSelectedRequest(request);
     setActionType(action);
     setComment('');
+    setRequestType('');
   };
 
   const confirmAction = async () => {
@@ -74,7 +89,18 @@ export default function Approvals() {
     
     try {
       if (actionType === 'approve') {
-        await approveRequest.mutateAsync({ requestId: selectedRequest.id, comment: comment || undefined });
+        // For Procurement Manager approving pm_approved requests, require request type
+        const needsRequestType = isProcurementManager && selectedRequest.status === 'pm_approved';
+        if (needsRequestType && !requestType) {
+          toast({ title: 'Error', description: 'Please select a request type', variant: 'destructive' });
+          setIsProcessing(false);
+          return;
+        }
+        await approveRequest.mutateAsync({ 
+          requestId: selectedRequest.id, 
+          comment: comment || undefined,
+          requestType: needsRequestType ? requestType : undefined 
+        });
       } else {
         await rejectRequest.mutateAsync({ requestId: selectedRequest.id, comment });
       }
@@ -94,6 +120,7 @@ export default function Approvals() {
       setSelectedRequest(null);
       setActionType(null);
       setComment('');
+      setRequestType('');
     }
   };
 
@@ -262,13 +289,34 @@ export default function Approvals() {
             </DialogTitle>
             <DialogDescription>
               {actionType === 'approve' 
-                ? 'This request will be marked as approved.'
+                ? selectedRequest?.status === 'pm_approved'
+                  ? 'As Procurement Manager, please select the request type and approve.'
+                  : 'This request will be forwarded to Procurement for final approval.'
                 : 'Please provide a reason for rejection. This will be visible to the requester.'
               }
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
+          <div className="py-4 space-y-4">
+            {/* Request Type Selection for Procurement Manager */}
+            {actionType === 'approve' && isProcurementManager && selectedRequest?.status === 'pm_approved' && (
+              <div className="space-y-2">
+                <Label htmlFor="requestType">Request Type *</Label>
+                <Select 
+                  value={requestType} 
+                  onValueChange={(v) => setRequestType(v as 'stock_request' | 'purchase_request')}
+                >
+                  <SelectTrigger id="requestType">
+                    <SelectValue placeholder="Select request type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stock_request">Stock Request</SelectItem>
+                    <SelectItem value="purchase_request">Purchase Request</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
             <Textarea
               placeholder={actionType === 'approve' ? 'Add a comment (optional)' : 'Reason for rejection (required)'}
               value={comment}
@@ -284,7 +332,11 @@ export default function Approvals() {
             <Button 
               variant={actionType === 'approve' ? 'success' : 'destructive'}
               onClick={confirmAction}
-              disabled={(actionType === 'reject' && !comment.trim()) || isProcessing}
+              disabled={
+                (actionType === 'reject' && !comment.trim()) || 
+                (actionType === 'approve' && isProcurementManager && selectedRequest?.status === 'pm_approved' && !requestType) ||
+                isProcessing
+              }
             >
               {isProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {actionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}

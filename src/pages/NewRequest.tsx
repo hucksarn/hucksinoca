@@ -20,23 +20,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Upload, Save, Send, Loader2 } from 'lucide-react';
-import { useProjects, useCreateMaterialRequest, useCreateProject } from '@/hooks/useDatabase';
+import { useProjects, useCreateMaterialRequest, useCreateProject, useMaterialCategories } from '@/hooks/useDatabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
-type MaterialCategory = 'cement' | 'steel' | 'block' | 'electrical' | 'plumbing' | 'finishing' | 'other';
 type Unit = 'nos' | 'bags' | 'kg' | 'ton' | 'm3';
-
-const categories: { value: MaterialCategory; label: string }[] = [
-  { value: 'cement', label: 'Cement' },
-  { value: 'steel', label: 'Steel' },
-  { value: 'block', label: 'Block' },
-  { value: 'electrical', label: 'Electrical' },
-  { value: 'plumbing', label: 'Plumbing' },
-  { value: 'finishing', label: 'Finishing' },
-  { value: 'other', label: 'Other' },
-];
 
 const units: { value: Unit; label: string }[] = [
   { value: 'nos', label: 'Nos' },
@@ -48,7 +37,7 @@ const units: { value: Unit; label: string }[] = [
 
 interface FormItem {
   id: string;
-  category: MaterialCategory | '';
+  category: string;
   name: string;
   specification: string;
   quantity: string;
@@ -61,12 +50,12 @@ export default function NewRequest() {
   const navigate = useNavigate();
   const { profile, isAdmin } = useAuth();
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: categories = [], isLoading: categoriesLoading } = useMaterialCategories();
   const createRequest = useCreateMaterialRequest();
   const createProject = useCreateProject();
   
   const [formData, setFormData] = useState({
     projectId: '',
-    requestType: '' as 'stock_request' | 'purchase_request' | '',
     priority: 'normal' as 'urgent' | 'normal',
     requiredDate: '',
     remarks: '',
@@ -129,14 +118,6 @@ export default function NewRequest() {
       toast({ title: 'Error', description: 'Please select a project', variant: 'destructive' });
       return false;
     }
-    if (!formData.requestType) {
-      toast({ title: 'Error', description: 'Please select a request type', variant: 'destructive' });
-      return false;
-    }
-    if (formData.requestType === 'purchase_request' && !formData.requiredDate) {
-      toast({ title: 'Error', description: 'Required date is mandatory for purchase requests', variant: 'destructive' });
-      return false;
-    }
 
     const validItems = items.filter(item => item.category && item.name && item.quantity && item.unit);
     if (validItems.length === 0) {
@@ -166,7 +147,6 @@ export default function NewRequest() {
     try {
       await createRequest.mutateAsync({
         projectId: formData.projectId,
-        requestType: formData.requestType as string,
         priority: formData.priority,
         requiredDate: formData.requiredDate || null,
         remarks: formData.remarks,
@@ -192,7 +172,7 @@ export default function NewRequest() {
     }
   };
 
-  if (projectsLoading) {
+  if (projectsLoading || categoriesLoading) {
     return (
       <MainLayout title="New Material Request" subtitle="Create a new material request for your project">
         <div className="flex items-center justify-center h-64">
@@ -247,22 +227,6 @@ export default function NewRequest() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="type">Request Type *</Label>
-              <Select 
-                value={formData.requestType} 
-                onValueChange={(v) => setFormData({ ...formData, requestType: v as any })}
-              >
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="stock_request">Stock Request</SelectItem>
-                  <SelectItem value="purchase_request">Purchase Request</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="priority">Priority *</Label>
               <Select 
                 value={formData.priority} 
@@ -278,17 +242,15 @@ export default function NewRequest() {
               </Select>
             </div>
 
-            {formData.requestType === 'purchase_request' && (
-              <div className="space-y-2">
-                <Label htmlFor="requiredDate">Required Date *</Label>
-                <Input
-                  id="requiredDate"
-                  type="date"
-                  value={formData.requiredDate}
-                  onChange={(e) => setFormData({ ...formData, requiredDate: e.target.value })}
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="requiredDate">Required Date</Label>
+              <Input
+                id="requiredDate"
+                type="date"
+                value={formData.requiredDate}
+                onChange={(e) => setFormData({ ...formData, requiredDate: e.target.value })}
+              />
+            </div>
 
             <div className="md:col-span-2 space-y-2">
               <Label htmlFor="remarks">Remarks / Reason</Label>
@@ -361,8 +323,8 @@ export default function NewRequest() {
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map(cat => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
+                          <SelectItem key={cat.slug} value={cat.slug}>
+                            {cat.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
