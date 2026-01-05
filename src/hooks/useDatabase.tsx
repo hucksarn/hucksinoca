@@ -208,20 +208,13 @@ export function useCreateMaterialRequest() {
         throw new Error('You must be logged in to create a request');
       }
 
-      // Verify session is valid
+      // Get fresh session to ensure auth token is valid
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('Session check:', { 
-        hasSession: !!session, 
-        sessionUserId: session?.user?.id, 
-        contextUserId: user.id,
-        match: session?.user?.id === user.id 
-      });
-      
       if (!session) {
         throw new Error('Session expired. Please log in again.');
       }
       
-      // Always create request as 'draft' first so items can be added (RLS policy requirement)
+      // Create request as 'draft' first so items can be added (RLS policy requirement)
       const { data: request, error: requestError } = await supabase
         .from('material_requests')
         .insert({
@@ -230,14 +223,13 @@ export function useCreateMaterialRequest() {
           priority,
           required_date: requiredDate || null,
           remarks,
-          requester_id: session.user.id, // Use session user id directly
+          requester_id: session.user.id,
           request_number: 'TEMP',
           status: 'draft',
         })
         .select()
         .single();
       
-      console.log('Insert result:', { request, error: requestError?.message });
       if (requestError) throw requestError;
 
       // Create the items while request is still in draft status
