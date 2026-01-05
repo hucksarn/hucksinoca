@@ -2,3 +2,9 @@ project_id = "odijuvcwgjvevivkxofd"
 
 [functions.setup-admin]
 verify_jwt = false
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.delete-user]
+verify_jwt = true
