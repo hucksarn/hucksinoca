@@ -422,44 +422,44 @@ export default function Settings() {
 
         {/* User Management Tab (Admin Only) */}
         {isAdmin && (
-          <TabsContent value="users" className="space-y-4 md:space-y-6">
-            <div className="bg-card rounded-xl border border-border p-3 md:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
+          <TabsContent value="users" className="space-y-3 md:space-y-6">
+            <div className="bg-card rounded-xl border border-border p-2 md:p-6">
+              <div className="flex items-center justify-between gap-2 mb-3 md:mb-6">
                 <div>
-                  <h3 className="text-base md:text-lg font-semibold text-foreground">User Management</h3>
-                  <p className="text-xs md:text-sm text-muted-foreground">Create and manage system users</p>
+                  <h3 className="text-sm md:text-lg font-semibold text-foreground">User Management</h3>
+                  <p className="text-xs text-muted-foreground hidden md:block">Create and manage system users</p>
                 </div>
-                <Button variant="accent" size="sm" className="w-full sm:w-auto" onClick={() => setShowAddUser(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add User
+                <Button variant="accent" size="sm" className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3" onClick={() => setShowAddUser(true)}>
+                  <Plus className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Add User</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </div>
 
               {loadingUsers ? (
-                <div className="flex items-center justify-center py-8 md:py-12">
+                <div className="flex items-center justify-center py-6 md:py-12">
                   <Loader2 className="h-5 w-5 md:h-6 md:w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : users.length === 0 ? (
-                <div className="text-center py-8 md:py-12 text-muted-foreground">
-                  <Users className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 md:mb-4 opacity-50" />
-                  <p className="text-sm">No users found. Add your first user to get started.</p>
+                <div className="text-center py-6 md:py-12 text-muted-foreground">
+                  <Users className="h-8 w-8 md:h-12 md:w-12 mx-auto mb-2 md:mb-4 opacity-50" />
+                  <p className="text-xs md:text-sm">No users found. Add your first user.</p>
                 </div>
               ) : (
-                <div className="space-y-2 md:space-y-3">
+                <div className="space-y-1.5 md:space-y-3">
                 {users.map((u) => (
-                    <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 rounded-lg bg-muted/50 gap-3">
-                      <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                        <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-xs md:text-sm shrink-0">
+                    <div key={u.id} className="flex items-center justify-between p-2 md:p-4 rounded-lg bg-muted/50 gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="h-7 w-7 md:h-10 md:w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-[10px] md:text-sm shrink-0">
                           {u.full_name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-foreground text-sm md:text-base truncate">{u.full_name}</p>
-                          <p className="text-xs md:text-sm text-muted-foreground truncate">{u.email}</p>
-                          <p className="text-xs text-muted-foreground/70">{u.designation}</p>
+                          <p className="font-medium text-foreground text-xs md:text-base truncate">{u.full_name}</p>
+                          <p className="text-[10px] md:text-sm text-muted-foreground truncate">{u.email}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 justify-end shrink-0">
-                        <span className={`px-2 py-0.5 md:py-1 rounded-full text-xs font-medium ${
+                      <div className="flex items-center gap-1 md:gap-2 shrink-0">
+                        <span className={`px-1.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs font-medium ${
                           u.role === 'admin' 
                             ? 'bg-primary/10 text-primary' 
                             : 'bg-muted text-muted-foreground'
@@ -467,37 +467,35 @@ export default function Settings() {
                           {u.role === 'admin' ? 'Admin' : 'User'}
                         </span>
                         
-                        {/* Edit button - show for all except System Admin (unless you ARE System Admin) */}
                         {(u.designation !== 'System Admin' || profile?.designation === 'System Admin') && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-foreground"
+                            className="h-6 w-6 md:h-8 md:w-8 text-muted-foreground hover:text-foreground"
                             onClick={() => handleEditUser(u)}
                           >
-                            <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                            <Pencil className="h-3 w-3 md:h-4 md:w-4" />
                           </Button>
                         )}
                         
-                        {/* Delete button - not for self or System Admin */}
                         {u.id !== user?.id && u.designation !== 'System Admin' && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-6 w-6 md:h-8 md:w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => setUserToDelete({ id: u.id, name: u.full_name })}
                             disabled={deletingUserId === u.id}
                           >
                             {deletingUserId === u.id ? (
-                              <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />
+                              <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
                             ) : (
-                              <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                              <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                             )}
                           </Button>
                         )}
                         
                         {u.designation === 'System Admin' && u.id !== user?.id && profile?.designation !== 'System Admin' && (
-                          <span className="text-xs text-muted-foreground">Protected</span>
+                          <span className="text-[10px] text-muted-foreground">Protected</span>
                         )}
                       </div>
                     </div>
