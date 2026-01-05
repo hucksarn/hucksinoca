@@ -80,15 +80,16 @@ export function useCreateProject() {
 }
 
 export function useMaterialRequests() {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['material_requests', user?.id, isAdmin],
+    queryKey: ['material_requests', user?.id],
     queryFn: async () => {
-      // Get all requests
+      // Get only the current user's requests (My Requests)
       const { data: requests, error: requestsError } = await supabase
         .from('material_requests')
         .select('*')
+        .eq('requester_id', user!.id)
         .order('created_at', { ascending: false });
       
       if (requestsError) throw requestsError;
