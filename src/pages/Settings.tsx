@@ -58,9 +58,17 @@ interface UserWithProfile {
   role: 'admin' | 'user';
 }
 
+// Map designations to roles
+const designationRoleMap: Record<string, 'admin' | 'user'> = {
+  'Procurement Manager': 'admin',
+  'Project Manager': 'admin',
+  'Site Supervisor': 'user',
+  'Foreman': 'user',
+};
+
 export default function Settings() {
   const { toast } = useToast();
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, user } = useAuth();
   const [notifications, setNotifications] = useState({
     emailApprovals: true,
     emailUpdates: true,
@@ -73,19 +81,19 @@ export default function Settings() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [addingUser, setAddingUser] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({
     email: '',
     password: '',
     fullName: '',
     designation: 'Site Supervisor',
-    role: 'user' as 'admin' | 'user',
   });
 
   const designations = [
+    'Procurement Manager',
+    'Project Manager',
     'Site Supervisor',
     'Foreman',
-    'Project Manager',
-    'Procurement Manager',
   ];
 
   useEffect(() => {
@@ -148,6 +156,8 @@ export default function Settings() {
 
     setAddingUser(true);
     try {
+      const role = designationRoleMap[newUser.designation] || 'user';
+      
       // Call edge function to create user
       const response = await supabase.functions.invoke('create-user', {
         body: {
@@ -155,7 +165,7 @@ export default function Settings() {
           password: newUser.password,
           fullName: newUser.fullName,
           designation: newUser.designation,
-          role: newUser.role,
+          role: role,
         },
       });
 
@@ -172,7 +182,6 @@ export default function Settings() {
         password: '',
         fullName: '',
         designation: 'Site Supervisor',
-        role: 'user',
       });
       fetchUsers();
     } catch (error: any) {
@@ -183,6 +192,35 @@ export default function Settings() {
       });
     } finally {
       setAddingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingUserId(userId);
+    try {
+      const response = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+      });
+
+      if (response.error) throw response.error;
+
+      toast({
+        title: 'User Deleted',
+        description: `${userName} has been removed.`,
+      });
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete user',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -252,25 +290,40 @@ export default function Settings() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                {users.map((u) => (
+                    <div key={u.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold">
-                          {user.full_name.split(' ').map(n => n[0]).join('')}
+                          {u.full_name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">{user.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{user.designation}</p>
+                          <p className="font-medium text-foreground">{u.full_name}</p>
+                          <p className="text-sm text-muted-foreground">{u.designation}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.role === 'admin' 
+                          u.role === 'admin' 
                             ? 'bg-primary/10 text-primary' 
                             : 'bg-muted text-muted-foreground'
                         }`}>
-                          {user.role === 'admin' ? 'Admin' : 'User'}
+                          {u.role === 'admin' ? 'Admin' : 'User'}
                         </span>
+                        {u.id !== user?.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteUser(u.id, u.full_name)}
+                            disabled={deletingUserId === u.id}
+                          >
+                            {deletingUserId === u.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -539,25 +592,15 @@ export default function Settings() {
                 </SelectTrigger>
                 <SelectContent>
                   {designations.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                    <SelectItem key={d} value={d}>
+                      {d} {designationRoleMap[d] === 'admin' ? '(Admin)' : ''}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newUserRole">Role</Label>
-              <Select 
-                value={newUser.role} 
-                onValueChange={(v) => setNewUser({ ...newUser, role: v as 'admin' | 'user' })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">Normal User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+              <p className="text-xs text-muted-foreground">
+                Procurement Manager & Project Manager get Admin access
+              </p>
             </div>
           </div>
 
