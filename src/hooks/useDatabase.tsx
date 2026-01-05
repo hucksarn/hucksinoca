@@ -219,7 +219,7 @@ export function useCreateMaterialRequest() {
         .from('material_requests')
         .insert({
           project_id: projectId,
-          request_type: 'pending', // Will be set by admin during approval
+          request_type: 'stock_request', // Default, will be updated by admin during approval
           priority,
           required_date: requiredDate || null,
           remarks,
