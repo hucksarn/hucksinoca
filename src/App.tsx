@@ -10,13 +10,14 @@ import NewRequest from "./pages/NewRequest";
 import Approvals from "./pages/Approvals";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import ChangePassword from "./pages/ChangePassword";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, mustChangePassword, refreshProfile } = useAuth();
 
   if (loading) {
     return (
@@ -28,13 +29,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (mustChangePassword) {
+    return <ChangePassword onPasswordChanged={refreshProfile} />;
   }
 
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, mustChangePassword, refreshProfile } = useAuth();
 
   if (loading) {
     return (
@@ -46,6 +51,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (mustChangePassword) {
+    return <ChangePassword onPasswordChanged={refreshProfile} />;
   }
 
   if (!isAdmin) {

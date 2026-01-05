@@ -10,6 +10,7 @@ interface Profile {
   full_name: string;
   designation: string;
   phone: string | null;
+  must_change_password: boolean;
 }
 
 interface AuthContextType {
@@ -18,10 +19,11 @@ interface AuthContextType {
   profile: Profile | null;
   role: AppRole | null;
   isAdmin: boolean;
+  mustChangePassword: boolean;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string, designation: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,22 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, designation: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-          designation: designation,
-        }
-      }
-    });
-    
-    return { error: error as Error | null };
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfileAndRole(user.id);
+    }
   };
 
   const signIn = async (email: string, password: string) => {
@@ -141,10 +131,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         role,
         isAdmin: role === 'admin',
+        mustChangePassword: profile?.must_change_password ?? false,
         loading,
-        signUp,
         signIn,
         signOut,
+        refreshProfile,
       }}
     >
       {children}
