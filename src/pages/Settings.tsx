@@ -26,6 +26,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   User, 
   Bell, 
@@ -110,6 +120,10 @@ export default function Settings() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+
+  // Delete confirmation dialogs
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<MaterialCategory | null>(null);
 
   const designations = [
     'System Admin',
@@ -204,15 +218,13 @@ export default function Settings() {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
 
-    setDeletingUserId(userId);
+    setDeletingUserId(userToDelete.id);
     try {
       const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { userId },
+        body: { userId: userToDelete.id },
       });
 
       if (error) {
@@ -226,7 +238,7 @@ export default function Settings() {
 
       toast({
         title: 'User Deleted',
-        description: `${userName} has been removed.`,
+        description: `${userToDelete.name} has been removed.`,
       });
       fetchUsers();
     } catch (error: any) {
@@ -238,6 +250,7 @@ export default function Settings() {
       });
     } finally {
       setDeletingUserId(null);
+      setUserToDelete(null);
     }
   };
 
@@ -345,13 +358,13 @@ export default function Settings() {
     }
   };
 
-  const handleDeleteCategory = async (category: MaterialCategory) => {
-    if (!confirm(`Are you sure you want to delete "${category.name}"?`)) return;
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
 
-    setDeletingCategoryId(category.id);
+    setDeletingCategoryId(categoryToDelete.id);
     try {
-      await deleteCategory.mutateAsync(category.id);
-      toast({ title: 'Category Deleted', description: `${category.name} has been removed.` });
+      await deleteCategory.mutateAsync(categoryToDelete.id);
+      toast({ title: 'Category Deleted', description: `${categoryToDelete.name} has been removed.` });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -360,6 +373,7 @@ export default function Settings() {
       });
     } finally {
       setDeletingCategoryId(null);
+      setCategoryToDelete(null);
     }
   };
 
@@ -471,7 +485,7 @@ export default function Settings() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDeleteUser(u.id, u.full_name)}
+                            onClick={() => setUserToDelete({ id: u.id, name: u.full_name })}
                             disabled={deletingUserId === u.id}
                           >
                             {deletingUserId === u.id ? (
@@ -554,7 +568,7 @@ export default function Settings() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 md:h-8 md:w-8 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                        onClick={() => handleDeleteCategory(category)}
+                        onClick={() => setCategoryToDelete(category)}
                         disabled={deletingCategoryId === category.id}
                       >
                         {deletingCategoryId === category.id ? (
@@ -953,6 +967,74 @@ export default function Settings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base md:text-lg">Delete User</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs md:text-sm">
+              Are you sure you want to delete <span className="font-medium">{userToDelete?.name}</span>? This action cannot be undone. All data associated with this user will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto" disabled={!!deletingUserId}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={!!deletingUserId}
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingUserId ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete User
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Category Confirmation Dialog */}
+      <AlertDialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base md:text-lg">Delete Category</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs md:text-sm">
+              Are you sure you want to delete <span className="font-medium">"{categoryToDelete?.name}"</span>? This action cannot be undone. Material requests using this category may be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto" disabled={!!deletingCategoryId}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCategory}
+              disabled={!!deletingCategoryId}
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingCategoryId ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Category
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
