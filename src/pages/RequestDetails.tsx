@@ -30,14 +30,19 @@ import {
 const RequestDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin, profile } = useAuth();
+  const { isAdmin, profile, user } = useAuth();
   const { data: requests, isLoading: requestsLoading } = useMaterialRequests();
   const { data: items, isLoading: itemsLoading } = useMaterialRequestItems(id || '');
   const deleteMutation = useDeleteMaterialRequest();
 
   const request = requests?.find(r => r.id === id);
-  // Allow System Admin to delete requests
-  const canDelete = isAdmin && profile?.designation === 'System Admin';
+  
+  // System Admin can delete any request
+  // Regular users can delete their own draft/submitted requests
+  const canDelete = request && (
+    (isAdmin && profile?.designation === 'System Admin') ||
+    (request.requester_id === user?.id && ['draft', 'submitted'].includes(request.status))
+  );
 
   const handleDelete = async () => {
     if (!id) return;

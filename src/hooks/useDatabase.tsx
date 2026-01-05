@@ -9,6 +9,12 @@ export interface Project {
   status: string;
 }
 
+export interface MaterialCategory {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface MaterialRequest {
   id: string;
   request_number: string;
@@ -123,16 +129,22 @@ export function useMaterialRequests() {
 }
 
 export function usePendingApprovals() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, profile } = useAuth();
   
   return useQuery({
-    queryKey: ['pending_approvals', user?.id],
+    queryKey: ['pending_approvals', user?.id, profile?.designation],
     queryFn: async () => {
+      // Determine which statuses to show based on user role
+      // Project Managers see 'submitted' requests
+      // Procurement Managers see 'pm_approved' requests
+      const isProcurementManager = profile?.designation === 'Procurement Manager' || profile?.designation === 'System Admin';
+      const statusesToShow = isProcurementManager ? ['submitted', 'pm_approved'] : ['submitted'];
+      
       // Get pending requests
       const { data: requests, error: requestsError } = await supabase
         .from('material_requests')
         .select('*')
-        .in('status', ['submitted'])
+        .in('status', statusesToShow)
         .order('created_at', { ascending: false });
       
       if (requestsError) throw requestsError;
@@ -184,7 +196,6 @@ export function useCreateMaterialRequest() {
   return useMutation({
     mutationFn: async ({ 
       projectId, 
-      requestType, 
       priority, 
       requiredDate, 
       remarks, 
@@ -192,7 +203,6 @@ export function useCreateMaterialRequest() {
       status 
     }: {
       projectId: string;
-      requestType: string;
       priority: string;
       requiredDate: string | null;
       remarks: string;
@@ -204,7 +214,7 @@ export function useCreateMaterialRequest() {
         .from('material_requests')
         .insert({
           project_id: projectId,
-          request_type: requestType,
+          request_type: 'pending', // Will be set by admin during approval
           priority,
           required_date: requiredDate || null,
           remarks,
@@ -258,11 +268,20 @@ export function useApproveRequest() {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: async ({ requestId, comment }: { requestId: string; comment?: string }) => {
+    mutationFn: async ({ requestId, comment, requestType }: { requestId: string; comment?: string; requestType?: string }) => {
+      // Build the update object
+      const updateData: any = { status: 'pm_approved' };
+      
+      // If requestType is provided (procurement manager approval), set it and change status accordingly
+      if (requestType) {
+        updateData.request_type = requestType;
+        updateData.status = 'procurement_approved';
+      }
+      
       // Update request status
       const { error: updateError } = await supabase
         .from('material_requests')
-        .update({ status: 'pm_approved' })
+        .update(updateData)
         .eq('id', requestId);
       
       if (updateError) throw updateError;
@@ -273,7 +292,7 @@ export function useApproveRequest() {
         .insert({
           request_id: requestId,
           user_id: user!.id,
-          action: 'approved',
+          action: requestType ? 'procurement_approved' : 'pm_approved',
           comment,
         });
       
@@ -282,6 +301,7 @@ export function useApproveRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['material_requests'] });
       queryClient.invalidateQueries({ queryKey: ['pending_approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['pending_count'] });
     },
   });
 }
@@ -392,5 +412,60 @@ export function useDashboardMetrics() {
       ];
     },
     enabled: !!user,
+  });
+}
+
+// Material Categories
+export function useMaterialCategories() {
+  return useQuery({
+    queryKey: ['material_categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('material_categories')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data as MaterialCategory[];
+    },
+  });
+}
+
+export function useCreateMaterialCategory() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ name }: { name: string }) => {
+      const slug = name.toLowerCase().replace(/\s+/g, '_');
+      const { data, error } = await supabase
+        .from('material_categories')
+        .insert({ name, slug })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data as MaterialCategory;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['material_categories'] });
+    },
+  });
+}
+
+export function useDeleteMaterialCategory() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (categoryId: string) => {
+      const { error } = await supabase
+        .from('material_categories')
+        .delete()
+        .eq('id', categoryId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['material_categories'] });
+    },
   });
 }

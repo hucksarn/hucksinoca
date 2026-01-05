@@ -40,12 +40,14 @@ import {
   Plus,
   Loader2,
   Trash2,
-  Pencil
+  Pencil,
+  Tag
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
+import { useMaterialCategories, useCreateMaterialCategory, useDeleteMaterialCategory, MaterialCategory } from '@/hooks/useDatabase';
 
 const emailSchema = z.string().email('Please enter a valid email');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -100,6 +102,14 @@ export default function Settings() {
     designation: '',
   });
   const [updatingUser, setUpdatingUser] = useState(false);
+
+  // Categories state
+  const { data: categories = [], isLoading: categoriesLoading } = useMaterialCategories();
+  const createCategory = useCreateMaterialCategory();
+  const deleteCategory = useDeleteMaterialCategory();
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
 
   const designations = [
     'System Admin',
@@ -313,6 +323,46 @@ export default function Settings() {
     });
   };
 
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast({ title: 'Error', description: 'Category name is required', variant: 'destructive' });
+      return;
+    }
+
+    setAddingCategory(true);
+    try {
+      await createCategory.mutateAsync({ name: newCategoryName.trim() });
+      toast({ title: 'Category Added', description: `${newCategoryName} has been added.` });
+      setNewCategoryName('');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add category',
+        variant: 'destructive',
+      });
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category: MaterialCategory) => {
+    if (!confirm(`Are you sure you want to delete "${category.name}"?`)) return;
+
+    setDeletingCategoryId(category.id);
+    try {
+      await deleteCategory.mutateAsync(category.id);
+      toast({ title: 'Category Deleted', description: `${category.name} has been removed.` });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete category',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingCategoryId(null);
+    }
+  };
+
   return (
     <MainLayout 
       title="Settings" 
@@ -338,6 +388,12 @@ export default function Settings() {
             <Shield className="h-4 w-4" />
             Security
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="categories" className="gap-2">
+              <Tag className="h-4 w-4" />
+              Categories
+            </TabsTrigger>
+          )}
           {isAdmin && (
             <TabsTrigger value="organization" className="gap-2">
               <Building2 className="h-4 w-4" />
@@ -426,6 +482,83 @@ export default function Settings() {
                           <span className="text-xs text-muted-foreground">Protected</span>
                         )}
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
+
+        {/* Categories Tab (Admin Only) */}
+        {isAdmin && (
+          <TabsContent value="categories" className="space-y-6">
+            <div className="bg-card rounded-xl border border-border p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Material Categories</h3>
+                  <p className="text-sm text-muted-foreground">Manage categories for material requests</p>
+                </div>
+              </div>
+
+              {/* Add new category */}
+              <div className="flex gap-3 mb-6">
+                <Input
+                  placeholder="Enter new category name..."
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                  className="flex-1"
+                />
+                <Button 
+                  variant="accent" 
+                  onClick={handleAddCategory}
+                  disabled={addingCategory || !newCategoryName.trim()}
+                >
+                  {addingCategory ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  Add Category
+                </Button>
+              </div>
+
+              {/* Categories list */}
+              {categoriesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : categories.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Tag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No categories found. Add your first category above.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {categories.map((category) => (
+                    <div 
+                      key={category.id} 
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Tag className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-foreground">{category.name}</span>
+                        <span className="text-xs text-muted-foreground">({category.slug})</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteCategory(category)}
+                        disabled={deletingCategoryId === category.id}
+                      >
+                        {deletingCategoryId === category.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
                   ))}
                 </div>
