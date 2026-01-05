@@ -208,25 +208,36 @@ export function useCreateMaterialRequest() {
         throw new Error('You must be logged in to create a request');
       }
 
-      console.log('Creating request with user.id:', user.id);
+      // Verify session is valid
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Session check:', { 
+        hasSession: !!session, 
+        sessionUserId: session?.user?.id, 
+        contextUserId: user.id,
+        match: session?.user?.id === user.id 
+      });
+      
+      if (!session) {
+        throw new Error('Session expired. Please log in again.');
+      }
       
       // Always create request as 'draft' first so items can be added (RLS policy requirement)
       const { data: request, error: requestError } = await supabase
         .from('material_requests')
         .insert({
           project_id: projectId,
-          request_type: 'stock_request', // Default, will be updated by admin during approval
+          request_type: 'stock_request',
           priority,
           required_date: requiredDate || null,
           remarks,
-          requester_id: user.id,
-          request_number: 'TEMP', // Will be replaced by trigger
-          status: 'draft', // Always start as draft
+          requester_id: session.user.id, // Use session user id directly
+          request_number: 'TEMP',
+          status: 'draft',
         })
         .select()
         .single();
       
-      console.log('Insert result:', { request, requestError });
+      console.log('Insert result:', { request, error: requestError?.message });
       if (requestError) throw requestError;
 
       // Create the items while request is still in draft status
