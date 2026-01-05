@@ -10,13 +10,8 @@ export type UserRole =
 export type RequestStatus = 
   | 'draft'
   | 'submitted'
-  | 'pm_approved'
-  | 'pm_rejected'
-  | 'procurement_approved'
-  | 'stock_issued'
-  | 'po_raised'
-  | 'partially_delivered'
-  | 'fully_delivered'
+  | 'approved'
+  | 'rejected'
   | 'closed';
 
 export type RequestType = 'stock_request' | 'purchase_request';

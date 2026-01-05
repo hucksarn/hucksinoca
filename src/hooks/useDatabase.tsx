@@ -130,22 +130,16 @@ export function useMaterialRequests() {
 }
 
 export function usePendingApprovals() {
-  const { user, isAdmin, profile } = useAuth();
+  const { user, isAdmin } = useAuth();
   
   return useQuery({
-    queryKey: ['pending_approvals', user?.id, profile?.designation],
+    queryKey: ['pending_approvals', user?.id],
     queryFn: async () => {
-      // Determine which statuses to show based on user role
-      // Project Managers see 'submitted' requests
-      // Procurement Managers see 'pm_approved' requests
-      const isProcurementManager = profile?.designation === 'Procurement Manager' || profile?.designation === 'System Admin';
-      const statusesToShow = isProcurementManager ? ['submitted', 'pm_approved'] : ['submitted'];
-      
-      // Get pending requests
+      // Get submitted requests (pending approval)
       const { data: requests, error: requestsError } = await supabase
         .from('material_requests')
         .select('*')
-        .in('status', statusesToShow)
+        .eq('status', 'submitted')
         .order('created_at', { ascending: false });
       
       if (requestsError) throw requestsError;
@@ -274,20 +268,14 @@ export function useApproveRequest() {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: async ({ requestId, comment, requestType }: { requestId: string; comment?: string; requestType?: string }) => {
-      // Build the update object
-      const updateData: any = { status: 'pm_approved' };
-      
-      // If requestType is provided (procurement manager approval), set it and change status accordingly
-      if (requestType) {
-        updateData.request_type = requestType;
-        updateData.status = 'procurement_approved';
-      }
-      
-      // Update request status
+    mutationFn: async ({ requestId, comment, requestType }: { requestId: string; comment?: string; requestType: string }) => {
+      // Update request status and type
       const { error: updateError } = await supabase
         .from('material_requests')
-        .update(updateData)
+        .update({ 
+          status: 'approved',
+          request_type: requestType 
+        })
         .eq('id', requestId);
       
       if (updateError) throw updateError;
@@ -298,7 +286,7 @@ export function useApproveRequest() {
         .insert({
           request_id: requestId,
           user_id: user!.id,
-          action: requestType ? 'procurement_approved' : 'pm_approved',
+          action: 'approved',
           comment,
         });
       

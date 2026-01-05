@@ -57,7 +57,7 @@ export const materialRequests: MaterialRequest[] = [
       { id: 'item-3', category: 'electrical', name: 'Cable Wire', specification: '2.5mm, FR Grade', quantity: 1000, unit: 'nos' },
     ],
     attachments: [],
-    status: 'pm_approved',
+    status: 'approved',
     approvals: [
       { id: 'appr-1', userId: 'user-1', userName: 'John Mitchell', role: 'project_manager', action: 'approved', comment: 'Approved for procurement', timestamp: new Date('2024-01-16T10:00:00') },
     ],
@@ -82,7 +82,7 @@ export const materialRequests: MaterialRequest[] = [
       { id: 'item-5', category: 'finishing', name: 'Primer', specification: 'Water-based, White', quantity: 50, unit: 'nos' },
     ],
     attachments: [],
-    status: 'procurement_approved',
+    status: 'approved',
     approvals: [
       { id: 'appr-2', userId: 'user-1', userName: 'John Mitchell', role: 'project_manager', action: 'approved', timestamp: new Date('2024-01-13T11:00:00') },
       { id: 'appr-3', userId: 'user-5', userName: 'Emily Torres', role: 'procurement_manager', action: 'approved', comment: 'PO to be raised', timestamp: new Date('2024-01-14T09:00:00') },
@@ -106,7 +106,7 @@ export const materialRequests: MaterialRequest[] = [
       { id: 'item-6', category: 'plumbing', name: 'PVC Pipes', specification: '4 inch, Schedule 40', quantity: 100, unit: 'nos' },
     ],
     attachments: [],
-    status: 'stock_issued',
+    status: 'approved',
     approvals: [
       { id: 'appr-4', userId: 'user-1', userName: 'John Mitchell', role: 'project_manager', action: 'approved', timestamp: new Date('2024-01-11T15:00:00') },
     ],
