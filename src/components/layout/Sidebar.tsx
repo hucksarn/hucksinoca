@@ -10,125 +10,33 @@ import {
   ChevronRight,
   HardHat,
   LogOut,
-  Building2,
-  Trash2,
-  ChevronDown,
-  Loader2,
-  CheckCircle,
-  RotateCcw
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useProjects, useCreateProject, usePendingRequestsCount } from '@/hooks/useDatabase';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { usePendingRequestsCount } from '@/hooks/useDatabase';
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [projectsOpen, setProjectsOpen] = useState(true);
-  const [completedOpen, setCompletedOpen] = useState(false);
-  const [showAddProject, setShowAddProject] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectLocation, setNewProjectLocation] = useState('');
-  const [addingProject, setAddingProject] = useState(false);
-  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
-  const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null);
   
   const location = useLocation();
   const { profile, isAdmin, signOut } = useAuth();
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: pendingCount = 0 } = usePendingRequestsCount();
-  const createProject = useCreateProject();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const activeProjects = projects.filter(p => p.status === 'active');
-  const completedProjects = projects.filter(p => p.status === 'completed');
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'New Request', href: '/requests/new', icon: Plus, hideForAdmin: true },
     { name: isAdmin ? 'All Requests' : 'My Requests', href: '/requests', icon: FileText },
     { name: 'Approvals', href: '/approvals', icon: CheckSquare, adminOnly: true, badge: pendingCount },
+    { name: 'Projects', href: '/projects', icon: Building2, adminOnly: true },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
   const filteredNavigation = navigation.filter(item => 
     (!item.adminOnly || isAdmin) && (!item.hideForAdmin || !isAdmin)
   );
-
-  const handleAddProject = async () => {
-    if (!newProjectName.trim() || !newProjectLocation.trim()) {
-      toast({ title: 'Error', description: 'Name and location required', variant: 'destructive' });
-      return;
-    }
-
-    setAddingProject(true);
-    try {
-      await createProject.mutateAsync({
-        name: newProjectName,
-        location: newProjectLocation,
-      });
-      setNewProjectName('');
-      setNewProjectLocation('');
-      setShowAddProject(false);
-      toast({ title: 'Project Added' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setAddingProject(false);
-    }
-  };
-
-  const handleDeleteProject = async (projectId: string, projectName: string) => {
-    if (!confirm(`Delete "${projectName}"? This cannot be undone.`)) return;
-
-    setDeletingProjectId(projectId);
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', projectId);
-
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast({ title: 'Project Deleted' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setDeletingProjectId(null);
-    }
-  };
-
-  const handleToggleProjectStatus = async (projectId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'completed' : 'active';
-    setUpdatingProjectId(projectId);
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ status: newStatus })
-        .eq('id', projectId);
-
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast({ title: newStatus === 'completed' ? 'Project Completed' : 'Project Reactivated' });
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setUpdatingProjectId(null);
-    }
-  };
 
   return (
     <aside 
@@ -191,172 +99,6 @@ export function Sidebar() {
           })}
         </ul>
 
-        {/* Projects Section (Admin Only) */}
-        {isAdmin && !collapsed && (
-          <div className="mt-6 pt-4 border-t border-sidebar-border">
-            <Collapsible open={projectsOpen} onOpenChange={setProjectsOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider hover:text-sidebar-foreground">
-                <span className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Projects
-                </span>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", projectsOpen && "rotate-180")} />
-              </CollapsibleTrigger>
-              
-              <CollapsibleContent className="mt-2 space-y-1">
-                {projectsLoading ? (
-                  <div className="flex justify-center py-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-sidebar-foreground/40" />
-                  </div>
-                ) : (
-                  <>
-                    {activeProjects.map((project) => (
-                      <div
-                        key={project.id}
-                        className="group flex items-center justify-between px-3 py-2 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate font-medium">{project.name}</p>
-                          <p className="text-xs text-sidebar-foreground/50 truncate">{project.location}</p>
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-green-600 hover:text-green-600 hover:bg-green-600/10"
-                            onClick={() => handleToggleProjectStatus(project.id, project.status)}
-                            disabled={updatingProjectId === project.id}
-                            title="Mark as completed"
-                          >
-                            {updatingProjectId === project.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-3 w-3" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDeleteProject(project.id, project.name)}
-                            disabled={deletingProjectId === project.id}
-                          >
-                            {deletingProjectId === project.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {activeProjects.length === 0 && !showAddProject && (
-                      <p className="px-3 py-2 text-xs text-sidebar-foreground/50">No active projects</p>
-                    )}
-
-                    {showAddProject ? (
-                      <div className="px-3 py-2 space-y-2">
-                        <Input
-                          placeholder="Project name"
-                          value={newProjectName}
-                          onChange={(e) => setNewProjectName(e.target.value)}
-                          className="h-8 text-xs bg-sidebar-accent border-sidebar-border"
-                        />
-                        <Input
-                          placeholder="Location"
-                          value={newProjectLocation}
-                          onChange={(e) => setNewProjectLocation(e.target.value)}
-                          className="h-8 text-xs bg-sidebar-accent border-sidebar-border"
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="flex-1 h-7 text-xs"
-                            onClick={() => setShowAddProject(false)}
-                            disabled={addingProject}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="accent"
-                            className="flex-1 h-7 text-xs"
-                            onClick={handleAddProject}
-                            disabled={addingProject}
-                          >
-                            {addingProject ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Add'}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setShowAddProject(true)}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-primary hover:bg-sidebar-accent rounded-lg"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Project
-                      </button>
-                    )}
-                  </>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Completed Projects */}
-            {completedProjects.length > 0 && (
-              <Collapsible open={completedOpen} onOpenChange={setCompletedOpen} className="mt-2">
-                <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-wider hover:text-sidebar-foreground/60">
-                  <span className="flex items-center gap-2">
-                    <CheckCircle className="h-3 w-3" />
-                    Completed ({completedProjects.length})
-                  </span>
-                  <ChevronDown className={cn("h-3 w-3 transition-transform", completedOpen && "rotate-180")} />
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent className="mt-1 space-y-1">
-                  {completedProjects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="group flex items-center justify-between px-3 py-2 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium line-through">{project.name}</p>
-                        <p className="text-xs text-sidebar-foreground/30 truncate">{project.location}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 text-primary hover:text-primary hover:bg-primary/10"
-                        onClick={() => handleToggleProjectStatus(project.id, project.status)}
-                        disabled={updatingProjectId === project.id}
-                        title="Reactivate project"
-                      >
-                        {updatingProjectId === project.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <RotateCcw className="h-3 w-3" />
-                        )}
-                      </Button>
-                    </div>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-          </div>
-        )}
-
-        {/* Collapsed Projects Icon */}
-        {isAdmin && collapsed && (
-          <div className="mt-6 pt-4 border-t border-sidebar-border">
-            <div className="flex justify-center">
-              <div className="p-2 rounded-lg bg-sidebar-accent">
-                <Building2 className="h-5 w-5 text-sidebar-foreground/60" />
-              </div>
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* User Profile */}

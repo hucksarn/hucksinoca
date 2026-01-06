@@ -14,7 +14,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
-import { MobileProjectsSheet } from './MobileProjectsSheet';
 
 export function MobileNav() {
   const location = useLocation();
@@ -27,6 +26,7 @@ export function MobileNav() {
     { name: 'New', href: '/requests/new', icon: Plus, hideForAdmin: true },
     { name: isAdmin ? 'All' : 'Requests', href: '/requests', icon: FileText },
     { name: 'Approvals', href: '/approvals', icon: CheckSquare, adminOnly: true, badge: pendingCount },
+    { name: 'Projects', href: '/projects', icon: Building2, adminOnly: true },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
@@ -73,17 +73,6 @@ export function MobileNav() {
             );
           })}
           
-          {/* Projects button for admin */}
-          {isAdmin && (
-            <MobileProjectsSheet>
-              <button
-                className="flex flex-col items-center justify-center flex-1 h-full py-1 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Building2 className="h-5 w-5" />
-                <span className="text-[10px] mt-0.5 font-medium">Projects</span>
-              </button>
-            </MobileProjectsSheet>
-          )}
           
           <button
             onClick={() => setShowLogoutDialog(true)}
