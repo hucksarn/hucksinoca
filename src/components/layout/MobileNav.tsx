@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Plus, CheckSquare, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Plus, CheckSquare, Settings, LogOut, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { usePendingRequestsCount } from '@/hooks/useDatabase';
@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
+import { MobileProjectsSheet } from './MobileProjectsSheet';
 
 export function MobileNav() {
   const location = useLocation();
@@ -71,6 +72,19 @@ export function MobileNav() {
               </Link>
             );
           })}
+          
+          {/* Projects button for admin */}
+          {isAdmin && (
+            <MobileProjectsSheet>
+              <button
+                className="flex flex-col items-center justify-center flex-1 h-full py-1 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Building2 className="h-5 w-5" />
+                <span className="text-[10px] mt-0.5 font-medium">Projects</span>
+              </button>
+            </MobileProjectsSheet>
+          )}
+          
           <button
             onClick={() => setShowLogoutDialog(true)}
             className="flex flex-col items-center justify-center flex-1 h-full py-1 text-muted-foreground hover:text-destructive transition-colors"
