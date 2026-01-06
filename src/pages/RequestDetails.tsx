@@ -155,34 +155,34 @@ const RequestDetails = () => {
       title={`Request ${request.request_number}`}
       subtitle="Material request details"
     >
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-6">
         {/* Header Actions */}
-        <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={() => navigate('/requests')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Requests
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <Button variant="outline" size="sm" onClick={() => navigate('/requests')}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
           </Button>
           
           <div className="flex items-center gap-2">
             {canApprove && (
-              <Button variant="success" onClick={() => setShowApproveDialog(true)}>
-                <Check className="h-4 w-4 mr-2" />
+              <Button variant="success" size="sm" onClick={() => setShowApproveDialog(true)}>
+                <Check className="h-4 w-4 mr-1" />
                 Approve
               </Button>
             )}
             {canDelete && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Request
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
+                <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete Material Request</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Are you sure you want to delete request {request.request_number}? This action cannot be undone. All items associated with this request will also be deleted.
+                      Are you sure you want to delete request {request.request_number}? This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -205,15 +205,15 @@ const RequestDetails = () => {
 
         {/* Approve Dialog */}
         <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Approve Request</DialogTitle>
               <DialogDescription>
-                Select whether this is a stock request (items available) or purchase request (items need to be purchased).
+                Select whether this is a stock request or purchase request.
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4 space-y-4">
-              <div className="space-y-2">
+            <div className="py-2 space-y-3">
+              <div className="space-y-1.5">
                 <Label htmlFor="requestType">Request Type *</Label>
                 <Select 
                   value={requestType} 
@@ -223,19 +223,19 @@ const RequestDetails = () => {
                     <SelectValue placeholder="Select request type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="stock_request">Stock Request (Available in stock)</SelectItem>
-                    <SelectItem value="purchase_request">Purchase Request (Need to purchase)</SelectItem>
+                    <SelectItem value="stock_request">Stock Request</SelectItem>
+                    <SelectItem value="purchase_request">Purchase Request</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="comment">Comment (optional)</Label>
                 <Textarea
                   id="comment"
                   placeholder="Add a comment..."
                   value={approveComment}
                   onChange={(e) => setApproveComment(e.target.value)}
-                  rows={3}
+                  rows={2}
                 />
               </div>
             </div>
@@ -245,7 +245,7 @@ const RequestDetails = () => {
               </Button>
               <Button variant="success" onClick={handleApprove} disabled={isApproving}>
                 {isApproving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Confirm Approval
+                Confirm
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -253,56 +253,53 @@ const RequestDetails = () => {
 
         {/* Request Info */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+          <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-base sm:text-lg">
               <span>Request Information</span>
-              <div className="flex gap-2">
-                <Badge variant={getStatusColor(request.status)}>
+              <div className="flex gap-1.5">
+                <Badge variant={getStatusColor(request.status)} className="text-xs">
                   {request.status.replace('_', ' ').toUpperCase()}
                 </Badge>
-                <Badge variant={getPriorityColor(request.priority)}>
+                <Badge variant={getPriorityColor(request.priority)} className="text-xs">
                   {request.priority.toUpperCase()}
                 </Badge>
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Request Number</p>
-                <p className="font-medium">{request.request_number}</p>
+                <p className="text-xs text-muted-foreground">Request #</p>
+                <p className="text-sm font-medium truncate">{request.request_number}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Project</p>
-                <p className="font-medium">{request.project_name}</p>
+                <p className="text-xs text-muted-foreground">Project</p>
+                <p className="text-sm font-medium truncate">{request.project_name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Request Type</p>
-                <p className="font-medium capitalize">{request.request_type}</p>
+                <p className="text-xs text-muted-foreground">Type</p>
+                <p className="text-sm font-medium capitalize">{request.request_type}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Requester</p>
-                <p className="font-medium">{request.requester_name}</p>
-                {request.requester_designation && (
-                  <p className="text-sm text-muted-foreground">{request.requester_designation}</p>
-                )}
+                <p className="text-xs text-muted-foreground">Requester</p>
+                <p className="text-sm font-medium truncate">{request.requester_name}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Required Date</p>
-                <p className="font-medium">
+                <p className="text-xs text-muted-foreground">Required Date</p>
+                <p className="text-sm font-medium">
                   {request.required_date 
-                    ? format(new Date(request.required_date), 'PPP')
+                    ? format(new Date(request.required_date), 'PP')
                     : 'Not specified'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Created</p>
-                <p className="font-medium">{format(new Date(request.created_at), 'PPP')}</p>
+                <p className="text-xs text-muted-foreground">Created</p>
+                <p className="text-sm font-medium">{format(new Date(request.created_at), 'PP')}</p>
               </div>
               {request.remarks && (
-                <div className="col-span-full">
-                  <p className="text-sm text-muted-foreground">Remarks</p>
-                  <p className="font-medium">{request.remarks}</p>
+                <div className="col-span-2 lg:col-span-3">
+                  <p className="text-xs text-muted-foreground">Remarks</p>
+                  <p className="text-sm font-medium">{request.remarks}</p>
                 </div>
               )}
             </div>
@@ -311,39 +308,60 @@ const RequestDetails = () => {
 
         {/* Items */}
         <Card>
-          <CardHeader>
-            <CardTitle>Requested Items ({items?.length || 0})</CardTitle>
+          <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg">Requested Items ({items?.length || 0})</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {items && items.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>#</TableHead>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Specification</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Unit</TableHead>
-                    <TableHead>Preferred Brand</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item, index) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell>{item.specification || '-'}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell>{item.preferred_brand || '-'}</TableCell>
+              <div className="space-y-2 lg:hidden">
+                {/* Mobile: Card layout */}
+                {items.map((item, index) => (
+                  <div key={item.id} className="p-2 rounded-lg bg-muted/50 text-sm">
+                    <div className="flex justify-between items-start">
+                      <p className="font-medium">{index + 1}. {item.name}</p>
+                      <span className="text-xs text-muted-foreground">{item.category}</span>
+                    </div>
+                    <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                      <span>{item.quantity} {item.unit}</span>
+                      {item.specification && <span>• {item.specification}</span>}
+                      {item.preferred_brand && <span>• {item.preferred_brand}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {items && items.length > 0 ? (
+              <div className="hidden lg:block">
+                {/* Desktop: Table layout */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>#</TableHead>
+                      <TableHead>Item Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Specification</TableHead>
+                      <TableHead>Quantity</TableHead>
+                      <TableHead>Unit</TableHead>
+                      <TableHead>Preferred Brand</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item, index) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>{item.category}</TableCell>
+                        <TableCell>{item.specification || '-'}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.unit}</TableCell>
+                        <TableCell>{item.preferred_brand || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">No items in this request</p>
+              <p className="text-muted-foreground text-center py-4 text-sm">No items in this request</p>
             )}
           </CardContent>
         </Card>
