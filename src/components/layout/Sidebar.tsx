@@ -13,7 +13,9 @@ import {
   Building2,
   Trash2,
   ChevronDown,
-  Loader2
+  Loader2,
+  CheckCircle,
+  RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,11 +35,13 @@ import {
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(true);
+  const [completedOpen, setCompletedOpen] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectLocation, setNewProjectLocation] = useState('');
   const [addingProject, setAddingProject] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null);
   
   const location = useLocation();
   const { profile, isAdmin, signOut } = useAuth();
@@ -48,6 +52,7 @@ export function Sidebar() {
   const queryClient = useQueryClient();
 
   const activeProjects = projects.filter(p => p.status === 'active');
+  const completedProjects = projects.filter(p => p.status === 'completed');
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -102,6 +107,26 @@ export function Sidebar() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
       setDeletingProjectId(null);
+    }
+  };
+
+  const handleToggleProjectStatus = async (projectId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'completed' : 'active';
+    setUpdatingProjectId(projectId);
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: newStatus })
+        .eq('id', projectId);
+
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast({ title: newStatus === 'completed' ? 'Project Completed' : 'Project Reactivated' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setUpdatingProjectId(null);
     }
   };
 
@@ -194,19 +219,35 @@ export function Sidebar() {
                           <p className="truncate font-medium">{project.name}</p>
                           <p className="text-xs text-sidebar-foreground/50 truncate">{project.location}</p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteProject(project.id, project.name)}
-                          disabled={deletingProjectId === project.id}
-                        >
-                          {deletingProjectId === project.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3 w-3" />
-                          )}
-                        </Button>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-green-600 hover:text-green-600 hover:bg-green-600/10"
+                            onClick={() => handleToggleProjectStatus(project.id, project.status)}
+                            disabled={updatingProjectId === project.id}
+                            title="Mark as completed"
+                          >
+                            {updatingProjectId === project.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteProject(project.id, project.name)}
+                            disabled={deletingProjectId === project.id}
+                          >
+                            {deletingProjectId === project.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ))}
 
@@ -262,6 +303,47 @@ export function Sidebar() {
                 )}
               </CollapsibleContent>
             </Collapsible>
+
+            {/* Completed Projects */}
+            {completedProjects.length > 0 && (
+              <Collapsible open={completedOpen} onOpenChange={setCompletedOpen} className="mt-2">
+                <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-wider hover:text-sidebar-foreground/60">
+                  <span className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3" />
+                    Completed ({completedProjects.length})
+                  </span>
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", completedOpen && "rotate-180")} />
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent className="mt-1 space-y-1">
+                  {completedProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="group flex items-center justify-between px-3 py-2 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium line-through">{project.name}</p>
+                        <p className="text-xs text-sidebar-foreground/30 truncate">{project.location}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => handleToggleProjectStatus(project.id, project.status)}
+                        disabled={updatingProjectId === project.id}
+                        title="Reactivate project"
+                      >
+                        {updatingProjectId === project.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
         )}
 

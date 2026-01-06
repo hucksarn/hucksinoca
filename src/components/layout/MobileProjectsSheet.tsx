@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Building2, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Building2, Plus, Trash2, Loader2, CheckCircle, RotateCcw, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,10 +19,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { useProjects, useCreateProject } from '@/hooks/useDatabase';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 interface MobileProjectsSheetProps {
   children: React.ReactNode;
@@ -31,10 +37,12 @@ interface MobileProjectsSheetProps {
 export function MobileProjectsSheet({ children }: MobileProjectsSheetProps) {
   const [open, setOpen] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
+  const [completedOpen, setCompletedOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectLocation, setNewProjectLocation] = useState('');
   const [addingProject, setAddingProject] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { data: projects = [], isLoading } = useProjects();
@@ -43,6 +51,7 @@ export function MobileProjectsSheet({ children }: MobileProjectsSheetProps) {
   const queryClient = useQueryClient();
 
   const activeProjects = projects.filter(p => p.status === 'active');
+  const completedProjects = projects.filter(p => p.status === 'completed');
 
   const handleAddProject = async () => {
     if (!newProjectName.trim() || !newProjectLocation.trim()) {
@@ -89,6 +98,26 @@ export function MobileProjectsSheet({ children }: MobileProjectsSheetProps) {
     }
   };
 
+  const handleToggleProjectStatus = async (projectId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'completed' : 'active';
+    setUpdatingProjectId(projectId);
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: newStatus })
+        .eq('id', projectId);
+
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast({ title: newStatus === 'completed' ? 'Project Completed' : 'Project Reactivated' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setUpdatingProjectId(null);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -110,6 +139,7 @@ export function MobileProjectsSheet({ children }: MobileProjectsSheetProps) {
               </div>
             ) : (
               <>
+                {/* Active Projects */}
                 {activeProjects.map((project) => (
                   <div
                     key={project.id}
@@ -119,24 +149,39 @@ export function MobileProjectsSheet({ children }: MobileProjectsSheetProps) {
                       <p className="font-medium truncate">{project.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{project.location}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setProjectToDelete({ id: project.id, name: project.name })}
-                      disabled={deletingProjectId === project.id}
-                    >
-                      {deletingProjectId === project.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-green-600 hover:text-green-600 hover:bg-green-600/10"
+                        onClick={() => handleToggleProjectStatus(project.id, project.status)}
+                        disabled={updatingProjectId === project.id}
+                      >
+                        {updatingProjectId === project.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setProjectToDelete({ id: project.id, name: project.name })}
+                        disabled={deletingProjectId === project.id}
+                      >
+                        {deletingProjectId === project.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 ))}
 
                 {activeProjects.length === 0 && !showAddProject && (
-                  <p className="text-center py-8 text-muted-foreground">No active projects</p>
+                  <p className="text-center py-4 text-muted-foreground text-sm">No active projects</p>
                 )}
 
                 {showAddProject ? (
@@ -169,7 +214,7 @@ export function MobileProjectsSheet({ children }: MobileProjectsSheetProps) {
                         onClick={handleAddProject}
                         disabled={addingProject}
                       >
-                        {addingProject ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add Project'}
+                        {addingProject ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
                       </Button>
                     </div>
                   </div>
@@ -182,6 +227,46 @@ export function MobileProjectsSheet({ children }: MobileProjectsSheetProps) {
                     <Plus className="h-4 w-4 mr-2" />
                     Add Project
                   </Button>
+                )}
+
+                {/* Completed Projects */}
+                {completedProjects.length > 0 && (
+                  <Collapsible open={completedOpen} onOpenChange={setCompletedOpen} className="mt-4">
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground rounded-lg hover:bg-muted/50">
+                      <span className="flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3" />
+                        Completed ({completedProjects.length})
+                      </span>
+                      <ChevronDown className={cn("h-3 w-3 transition-transform", completedOpen && "rotate-180")} />
+                    </CollapsibleTrigger>
+                    
+                    <CollapsibleContent className="mt-2 space-y-2">
+                      {completedProjects.map((project) => (
+                        <div
+                          key={project.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate text-muted-foreground line-through">{project.name}</p>
+                            <p className="text-xs text-muted-foreground/60 truncate">{project.location}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                            onClick={() => handleToggleProjectStatus(project.id, project.status)}
+                            disabled={updatingProjectId === project.id}
+                          >
+                            {updatingProjectId === project.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
                 )}
               </>
             )}
