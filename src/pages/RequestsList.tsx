@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { useMaterialRequests, useProjects } from '@/hooks/useDatabase';
 import { useAuth } from '@/hooks/useAuth';
 
-type StatusFilter = 'all' | 'draft' | 'submitted' | 'pm_approved' | 'pm_rejected' | 'closed';
+type StatusFilter = 'all' | 'draft' | 'submitted' | 'approved' | 'pm_approved' | 'pm_rejected' | 'rejected' | 'closed';
 
 export default function RequestsList() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,8 +89,8 @@ export default function RequestsList() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="pm_approved">Approved</SelectItem>
-                <SelectItem value="pm_rejected">Rejected</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
