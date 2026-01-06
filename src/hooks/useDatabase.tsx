@@ -480,3 +480,36 @@ export function useDeleteMaterialCategory() {
     },
   });
 }
+
+// User management with caching
+export interface UserWithProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  designation: string;
+  role: 'admin' | 'user';
+}
+
+export function useUsers() {
+  const { isAdmin } = useAuth();
+  
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('list-users');
+      
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      return (data?.users || []) as UserWithProfile[];
+    },
+    enabled: isAdmin,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+  });
+}
+
+export function useInvalidateUsers() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: ['users'] });
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,18 +57,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
-import { useMaterialCategories, useCreateMaterialCategory, useDeleteMaterialCategory, MaterialCategory } from '@/hooks/useDatabase';
+import { useMaterialCategories, useCreateMaterialCategory, useDeleteMaterialCategory, MaterialCategory, useUsers, useInvalidateUsers, UserWithProfile } from '@/hooks/useDatabase';
 
 const emailSchema = z.string().email('Please enter a valid email');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
-
-interface UserWithProfile {
-  id: string;
-  email: string;
-  full_name: string;
-  designation: string;
-  role: 'admin' | 'user';
-}
 
 // Map designations to roles
 const designationRoleMap: Record<string, 'admin' | 'user'> = {
@@ -89,9 +81,9 @@ export default function Settings() {
     inAppAll: true,
   });
 
-  // User management state
-  const [users, setUsers] = useState<UserWithProfile[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  // User management state - now using React Query with caching
+  const { data: users = [], isLoading: loadingUsers } = useUsers();
+  const invalidateUsers = useInvalidateUsers();
   const [showAddUser, setShowAddUser] = useState(false);
   const [addingUser, setAddingUser] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
@@ -132,34 +124,6 @@ export default function Settings() {
     'Site Supervisor',
     'Foreman',
   ];
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchUsers();
-    }
-  }, [isAdmin]);
-
-  const fetchUsers = async () => {
-    setLoadingUsers(true);
-    try {
-      // Use edge function to get users with emails
-      const { data, error } = await supabase.functions.invoke('list-users');
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      setUsers(data.users || []);
-    } catch (error: any) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load users',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
 
   const handleAddUser = async () => {
     try {
@@ -206,7 +170,7 @@ export default function Settings() {
         fullName: '',
         designation: 'Site Supervisor',
       });
-      fetchUsers();
+      invalidateUsers();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -240,7 +204,7 @@ export default function Settings() {
         title: 'User Deleted',
         description: `${userToDelete.name} has been removed.`,
       });
-      fetchUsers();
+      invalidateUsers();
     } catch (error: any) {
       console.error('Delete user catch:', error);
       toast({
@@ -317,7 +281,7 @@ export default function Settings() {
 
       setShowEditUser(false);
       setEditingUser(null);
-      fetchUsers();
+      invalidateUsers();
     } catch (error: any) {
       toast({
         title: 'Error',
