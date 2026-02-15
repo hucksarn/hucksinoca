@@ -49,6 +49,7 @@ export default function Stock() {
   const [manualRows, setManualRows] = useState<UploadRow[]>([
     { id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '' },
   ]);
+  const [activeTab, setActiveTab] = useState<'manual' | 'excel'>('manual');
 
   const loadStock = async () => {
     try {
@@ -177,6 +178,8 @@ export default function Stock() {
     void handleImportRows(cleaned);
   };
 
+  const hasManualRows = manualRows.some((row) => row.description.trim().length > 0);
+
   return (
     <MainLayout title="Stock" subtitle="Store items inventory">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -239,7 +242,7 @@ export default function Stock() {
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="manual" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'manual' | 'excel')} className="space-y-4">
             <TabsList className="w-full">
               <TabsTrigger value="manual" className="flex-1">Manual Entry</TabsTrigger>
               <TabsTrigger value="excel" className="flex-1">Upload Excel</TabsTrigger>
@@ -321,10 +324,6 @@ export default function Stock() {
                 <Button variant="outline" onClick={handleAddManualRow} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Add Row
-                </Button>
-                <Button variant="accent" onClick={handleSaveManual} disabled={uploading} className="gap-2">
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  Save to Stock
                 </Button>
               </div>
             </TabsContent>
@@ -411,6 +410,16 @@ export default function Stock() {
                 <p className="text-sm text-muted-foreground">Upload an Excel file to preview rows.</p>
               )}
 
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            {activeTab === 'manual' ? (
+              <Button variant="accent" onClick={handleSaveManual} disabled={uploading || !hasManualRows} className="gap-2">
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Save to Stock
+              </Button>
+            ) : (
               <Button
                 variant="accent"
                 onClick={() => handleImportRows(uploadRows)}
@@ -419,8 +428,8 @@ export default function Stock() {
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Import to Stock
               </Button>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </MainLayout>
