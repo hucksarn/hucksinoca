@@ -1,7 +1,7 @@
 import { CheckCircle, XCircle, Clock, FileText, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { isLocalMode, requestsApi } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ActivityItem {
@@ -24,16 +24,27 @@ export function RecentActivity() {
     queryFn: async () => {
       const items: ActivityItem[] = [];
 
-      // Fetch recent approvals
+      if (isLocalMode) {
+        // In local mode, derive activity from requests list
+        const requests = await requestsApi.list();
+        const recent = (requests as any[]).slice(0, 5);
+        for (const req of recent) {
+          items.push({
+            id: `request-${req.id}`,
+            type: req.status === 'submitted' ? 'submitted' : req.status === 'approved' ? 'approved' : 'updated',
+            message: `${req.request_number} ${req.status === 'draft' ? 'created as draft' : req.status} by ${req.requester_name || 'Unknown'}`,
+            time: formatDistanceToNow(new Date(req.created_at), { addSuffix: true }),
+          });
+        }
+        return items;
+      }
+
+      // Cloud mode
+      const { supabase } = await import('@/integrations/supabase/client');
+
       const { data: approvals } = await supabase
         .from('approvals')
-        .select(`
-          id,
-          action,
-          created_at,
-          request:material_requests(request_number),
-          profile:profiles!approvals_user_id_fkey(full_name)
-        `)
+        .select(`id, action, created_at, request:material_requests(request_number), profile:profiles!approvals_user_id_fkey(full_name)`)
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -50,17 +61,9 @@ export function RecentActivity() {
         });
       }
 
-      // Fetch recent requests
       const { data: requests } = await supabase
         .from('material_requests')
-        .select(`
-          id,
-          request_number,
-          status,
-          created_at,
-          updated_at,
-          profile:profiles!material_requests_requester_id_fkey(full_name)
-        `)
+        .select(`id, request_number, status, created_at, updated_at, profile:profiles!material_requests_requester_id_fkey(full_name)`)
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -76,7 +79,6 @@ export function RecentActivity() {
         });
       }
 
-      // Sort by time and return top 5
       return items.slice(0, 5);
     },
   });
@@ -85,9 +87,7 @@ export function RecentActivity() {
     return (
       <div className="bg-card rounded-xl border border-border p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
       </div>
     );
   }
@@ -95,7 +95,6 @@ export function RecentActivity() {
   return (
     <div className="bg-card rounded-xl border border-border p-6">
       <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
-      
       <div className="space-y-4">
         {activities.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
@@ -103,14 +102,8 @@ export function RecentActivity() {
           activities.map((activity, index) => {
             const { icon: Icon, className } = activityIcons[activity.type];
             return (
-              <div 
-                key={activity.id} 
-                className="flex items-start gap-3 animate-slide-up"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className={cn("p-2 rounded-lg bg-muted", className)}>
-                  <Icon className="h-4 w-4" />
-                </div>
+              <div key={activity.id} className="flex items-start gap-3 animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
+                <div className={cn("p-2 rounded-lg bg-muted", className)}><Icon className="h-4 w-4" /></div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-foreground">{activity.message}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{activity.time}</p>

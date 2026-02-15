@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Plus, Upload, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { isLocalMode, stockApi as stockApiLocal, getAuthToken } from '@/lib/api';
 import * as XLSX from 'xlsx';
 
 type StockItem = {
@@ -31,15 +31,27 @@ type UploadRow = {
   unit: string;
 };
 
-async function stockApi(method: 'GET' | 'POST', body?: any) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+async function stockApiFetch(method: 'GET' | 'POST', body?: any) {
+  if (isLocalMode) {
+    if (method === 'GET') {
+      const items = await stockApiLocal.list();
+      return { items };
+    }
+    const action = body?.action;
+    if (action === 'deduct') {
+      const items = await stockApiLocal.deduct(body.items);
+      return { items };
+    }
+    const items = await stockApiLocal.add(body.items);
+    return { items };
+  }
 
+  // Cloud mode: use edge function
+  const { supabase } = await import('@/integrations/supabase/client');
   const res = await supabase.functions.invoke('stock-api', {
     method,
     body: method === 'POST' ? body : undefined,
   });
-
   if (res.error) throw new Error(res.error.message || 'Stock API error');
   return res.data;
 }
@@ -58,7 +70,7 @@ export default function Stock() {
 
   const loadStock = async () => {
     try {
-      const data = await stockApi('GET');
+      const data = await stockApiFetch('GET');
       setStockItems(Array.isArray(data.items) ? data.items : []);
     } catch (error) {
       console.error('[Stock] Load error:', error);
@@ -117,7 +129,7 @@ export default function Stock() {
     }
     setUploading(true);
     try {
-      const data = await stockApi('POST', { items: rows });
+      const data = await stockApiFetch('POST', { items: rows });
       setStockItems(Array.isArray(data.items) ? data.items : []);
       setUploadRows([]);
       setManualRows([{ id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '' }]);

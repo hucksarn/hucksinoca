@@ -55,7 +55,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { isLocalMode, usersApi } from '@/lib/api';
 import { z } from 'zod';
 import { useMaterialCategories, useCreateMaterialCategory, useDeleteMaterialCategory, MaterialCategory, useUsers, useInvalidateUsers, UserWithProfile } from '@/hooks/useDatabase';
 
@@ -146,18 +146,18 @@ export default function Settings() {
     try {
       const role = designationRoleMap[newUser.designation] || 'user';
       
-      // Call edge function to create user
-      const response = await supabase.functions.invoke('create-user', {
-        body: {
-          email: newUser.email,
-          password: newUser.password,
-          fullName: newUser.fullName,
-          designation: newUser.designation,
-          role: role,
-        },
-      });
-
-      if (response.error) throw response.error;
+      if (isLocalMode) {
+        await usersApi.create({
+          email: newUser.email, password: newUser.password,
+          full_name: newUser.fullName, designation: newUser.designation, role,
+        });
+      } else {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const response = await supabase.functions.invoke('create-user', {
+          body: { email: newUser.email, password: newUser.password, fullName: newUser.fullName, designation: newUser.designation, role },
+        });
+        if (response.error) throw response.error;
+      }
 
       toast({
         title: 'User Created',
@@ -188,17 +188,13 @@ export default function Settings() {
 
     setDeletingUserId(userToDelete.id);
     try {
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { userId: userToDelete.id },
-      });
-
-      if (error) {
-        console.error('Delete user error:', error);
-        throw new Error(error.message || 'Failed to delete user');
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
+      if (isLocalMode) {
+        await usersApi.remove(userToDelete.id);
+      } else {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data, error } = await supabase.functions.invoke('delete-user', { body: { userId: userToDelete.id } });
+        if (error) throw new Error(error.message || 'Failed to delete user');
+        if (data?.error) throw new Error(data.error);
       }
 
       toast({
@@ -259,19 +255,19 @@ export default function Settings() {
     try {
       const role = designationRoleMap[editUserData.designation] || 'user';
       
-      const { data, error } = await supabase.functions.invoke('update-user', {
-        body: {
-          userId: editingUser.id,
-          email: editUserData.email || undefined,
+      if (isLocalMode) {
+        await usersApi.update(editingUser.id, {
+          full_name: editUserData.fullName, designation: editUserData.designation, role,
           password: editUserData.password || undefined,
-          fullName: editUserData.fullName,
-          designation: editUserData.designation,
-          role: role,
-        },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+        });
+      } else {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data, error } = await supabase.functions.invoke('update-user', {
+          body: { userId: editingUser.id, email: editUserData.email || undefined, password: editUserData.password || undefined, fullName: editUserData.fullName, designation: editUserData.designation, role },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+      }
 
       toast({
         title: 'User Updated',
