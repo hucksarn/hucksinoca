@@ -107,10 +107,11 @@ serve(async (req) => {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    console.error("[stock-api] Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: error.message === "Unauthorized" ? 401 : 500,
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("[stock-api] Error:", msg);
+    return new Response(JSON.stringify({ error: msg }), {
+      status: msg === "Unauthorized" ? 401 : 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
