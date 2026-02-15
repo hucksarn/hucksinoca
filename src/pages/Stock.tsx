@@ -234,7 +234,7 @@ export default function Stock() {
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Add GRN</DialogTitle>
             <DialogDescription>
@@ -242,112 +242,18 @@ export default function Stock() {
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'manual' | 'excel')} className="space-y-4">
-            <TabsList className="w-full">
-              <TabsTrigger value="manual" className="flex-1">Manual Entry</TabsTrigger>
-              <TabsTrigger value="excel" className="flex-1">Upload Excel</TabsTrigger>
-            </TabsList>
+          <div className="flex flex-col gap-4 max-h-[60vh]">
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => setActiveTab(value as 'manual' | 'excel')}
+              className="space-y-4 overflow-y-auto pr-1"
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="manual" className="flex-1">Manual Entry</TabsTrigger>
+                <TabsTrigger value="excel" className="flex-1">Upload Excel</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="manual" className="space-y-4">
-              <div className="border rounded-lg p-3">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {manualRows.map((row, index) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    <Input
-                      value={row.item}
-                      onChange={(event) => {
-                        const next = [...manualRows];
-                        next[index] = { ...row, item: event.target.value };
-                        setManualRows(next);
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      value={row.description}
-                      onChange={(event) => {
-                        const next = [...manualRows];
-                        next[index] = { ...row, description: event.target.value };
-                              setManualRows(next);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="w-28">
-                          <Input
-                            value={row.qty}
-                            onChange={(event) => {
-                              const next = [...manualRows];
-                              next[index] = { ...row, qty: Number(event.target.value) || 0 };
-                              setManualRows(next);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="w-32">
-                          <Input
-                            value={row.unit}
-                            onChange={(event) => {
-                              const next = [...manualRows];
-                              next[index] = { ...row, unit: event.target.value };
-                              setManualRows(next);
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell className="w-10 text-right">
-                          {manualRows.length > 1 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveManualRow(row.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <Button variant="outline" onClick={handleAddManualRow} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Row
-                </Button>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="excel" className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} />
-                <Button variant="outline" className="gap-2" disabled={uploading}>
-                  <Upload className="h-4 w-4" />
-                  Upload
-                </Button>
-                <a
-                  href="/stock_sample.csv"
-                  className="text-xs text-primary underline underline-offset-4"
-                  download
-                >
-                  Download sample CSV
-                </a>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Required columns: <span className="font-medium">Item, Description, Qty, Unit</span>
-              </p>
-
-              {uploadRows.length > 0 ? (
+              <TabsContent value="manual" className="space-y-4">
                 <div className="border rounded-lg p-3">
                   <Table>
                     <TableHeader>
@@ -356,18 +262,19 @@ export default function Stock() {
                         <TableHead>Description</TableHead>
                         <TableHead>Qty</TableHead>
                         <TableHead>Unit</TableHead>
+                        <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {uploadRows.map((row, index) => (
+                      {manualRows.map((row, index) => (
                         <TableRow key={row.id}>
                           <TableCell>
                             <Input
                               value={row.item}
                               onChange={(event) => {
-                                const next = [...uploadRows];
+                                const next = [...manualRows];
                                 next[index] = { ...row, item: event.target.value };
-                                setUploadRows(next);
+                                setManualRows(next);
                               }}
                             />
                           </TableCell>
@@ -375,9 +282,9 @@ export default function Stock() {
                             <Input
                               value={row.description}
                               onChange={(event) => {
-                                const next = [...uploadRows];
+                                const next = [...manualRows];
                                 next[index] = { ...row, description: event.target.value };
-                                setUploadRows(next);
+                                setManualRows(next);
                               }}
                             />
                           </TableCell>
@@ -385,9 +292,9 @@ export default function Stock() {
                             <Input
                               value={row.qty}
                               onChange={(event) => {
-                                const next = [...uploadRows];
+                                const next = [...manualRows];
                                 next[index] = { ...row, qty: Number(event.target.value) || 0 };
-                                setUploadRows(next);
+                                setManualRows(next);
                               }}
                             />
                           </TableCell>
@@ -395,40 +302,138 @@ export default function Stock() {
                             <Input
                               value={row.unit}
                               onChange={(event) => {
-                                const next = [...uploadRows];
+                                const next = [...manualRows];
                                 next[index] = { ...row, unit: event.target.value };
-                                setUploadRows(next);
+                                setManualRows(next);
                               }}
                             />
+                          </TableCell>
+                          <TableCell className="w-10 text-right">
+                            {manualRows.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveManualRow(row.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <Button variant="outline" onClick={handleAddManualRow} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Row
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="excel" className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} />
+                  <Button variant="outline" className="gap-2" disabled={uploading}>
+                    <Upload className="h-4 w-4" />
+                    Upload
+                  </Button>
+                  <a
+                    href="/stock_sample.csv"
+                    className="text-xs text-primary underline underline-offset-4"
+                    download
+                  >
+                    Download sample CSV
+                  </a>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Required columns: <span className="font-medium">Item, Description, Qty, Unit</span>
+                </p>
+
+                {uploadRows.length > 0 ? (
+                  <div className="border rounded-lg p-3">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Qty</TableHead>
+                          <TableHead>Unit</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {uploadRows.map((row, index) => (
+                          <TableRow key={row.id}>
+                            <TableCell>
+                              <Input
+                                value={row.item}
+                                onChange={(event) => {
+                                  const next = [...uploadRows];
+                                  next[index] = { ...row, item: event.target.value };
+                                  setUploadRows(next);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={row.description}
+                                onChange={(event) => {
+                                  const next = [...uploadRows];
+                                  next[index] = { ...row, description: event.target.value };
+                                  setUploadRows(next);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="w-28">
+                              <Input
+                                value={row.qty}
+                                onChange={(event) => {
+                                  const next = [...uploadRows];
+                                  next[index] = { ...row, qty: Number(event.target.value) || 0 };
+                                  setUploadRows(next);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="w-32">
+                              <Input
+                                value={row.unit}
+                                onChange={(event) => {
+                                  const next = [...uploadRows];
+                                  next[index] = { ...row, unit: event.target.value };
+                                  setUploadRows(next);
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Upload an Excel file to preview rows.</p>
+                )}
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t border-border pt-3 bg-background">
+              {activeTab === 'manual' ? (
+                <Button variant="accent" onClick={handleSaveManual} disabled={uploading || !hasManualRows} className="gap-2">
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Save to Stock
+                </Button>
               ) : (
-                <p className="text-sm text-muted-foreground">Upload an Excel file to preview rows.</p>
+                <Button
+                  variant="accent"
+                  onClick={() => handleImportRows(uploadRows)}
+                  disabled={uploading || uploadRows.length === 0}
+                >
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Import to Stock
+                </Button>
               )}
-
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            {activeTab === 'manual' ? (
-              <Button variant="accent" onClick={handleSaveManual} disabled={uploading || !hasManualRows} className="gap-2">
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Save to Stock
-              </Button>
-            ) : (
-              <Button
-                variant="accent"
-                onClick={() => handleImportRows(uploadRows)}
-                disabled={uploading || uploadRows.length === 0}
-              >
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Import to Stock
-              </Button>
-            )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
