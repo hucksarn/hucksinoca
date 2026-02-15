@@ -130,7 +130,8 @@ export default function NewRequest() {
     for (const si of stockItems) {
       const name = si.item || si.description;
       if (!name) continue;
-      const key = `${name}__${si.unit}`;
+      const unitKey = (si.unit || '').toLowerCase();
+      const key = `${name}__${unitKey}`;
       const current = balances.get(key);
       if (current) {
         current.qty += si.qty;
@@ -143,9 +144,10 @@ export default function NewRequest() {
       .sort((a, b) => (a.item || a.description).localeCompare(b.item || b.description));
   }, [stockItems]);
 
-  const getBalance = (description: string, unit: string) => {
+  const getBalance = (name: string, unit: string) => {
+    const unitKey = (unit || '').toLowerCase();
     const match = stockBalances.find(
-      (entry) => entry.description === description && entry.unit === unit,
+      (entry) => (entry.item || entry.description) === name && (entry.unit || '').toLowerCase() === unitKey,
     );
     return match?.qty ?? 0;
   };

@@ -330,7 +330,9 @@ app.post('/api/stock', authMiddleware, adminOnly, (req, res) => {
   const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
   const insertMany = db.transaction((rows) => {
     for (const row of rows) {
-      stmt.run(newId(), row.date || today, row.item || '', row.description || '', Number(row.qty) || 0, row.unit || '', req.user.id);
+      const item = row.item || row.description || '';
+      const unit = (row.unit || '').toLowerCase();
+      stmt.run(newId(), row.date || today, item, row.description || '', Number(row.qty) || 0, unit, req.user.id);
     }
   });
   insertMany(items);
@@ -347,7 +349,9 @@ app.post('/api/stock/deduct', authMiddleware, adminOnly, (req, res) => {
   const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
   const deductMany = db.transaction((rows) => {
     for (const row of rows) {
-      stmt.run(newId(), row.date || today, row.item || '', row.description || '', -Math.abs(Number(row.qty) || 0), row.unit || '', req.user.id);
+      const item = row.item || row.description || '';
+      const unit = (row.unit || '').toLowerCase();
+      stmt.run(newId(), row.date || today, item, row.description || '', -Math.abs(Number(row.qty) || 0), unit, req.user.id);
     }
   });
   deductMany(items);
