@@ -62,7 +62,7 @@ export default function NewRequest() {
   const { data: categories = [], isLoading: categoriesLoading } = useMaterialCategories();
   const createRequest = useCreateMaterialRequest();
   const createProject = useCreateProject();
-  const [stockItems, setStockItems] = useState<Array<{ description: string; qty: number; unit: string }>>([]);
+  const [stockItems, setStockItems] = useState<Array<{ item: string; description: string; qty: number; unit: string }>>([]);
   const [loadingStock, setLoadingStock] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -102,10 +102,11 @@ export default function NewRequest() {
         }
         if (Array.isArray(data.items)) {
           setStockItems(
-            data.items.map((item: any) => ({
-              description: String(item.description || '').trim(),
-              qty: Number(item.qty || 0),
-              unit: String(item.unit || '').trim(),
+            data.items.map((i: any) => ({
+              item: String(i.item || '').trim(),
+              description: String(i.description || '').trim(),
+              qty: Number(i.qty || 0),
+              unit: String(i.unit || '').trim(),
             })),
           );
         }
@@ -124,18 +125,19 @@ export default function NewRequest() {
   }, [toast]);
 
   const stockBalances = useMemo(() => {
-    const balances = new Map<string, { description: string; unit: string; qty: number }>();
-    for (const item of stockItems) {
-      if (!item.description) continue;
-      const key = `${item.description}__${item.unit}`;
+    const balances = new Map<string, { item: string; description: string; unit: string; qty: number }>();
+    for (const si of stockItems) {
+      const name = si.item || si.description;
+      if (!name) continue;
+      const key = `${name}__${si.unit}`;
       const current = balances.get(key);
       if (current) {
-        current.qty += item.qty;
+        current.qty += si.qty;
       } else {
-        balances.set(key, { description: item.description, unit: item.unit, qty: item.qty });
+        balances.set(key, { item: si.item, description: si.description, unit: si.unit, qty: si.qty });
       }
     }
-    return Array.from(balances.values()).sort((a, b) => a.description.localeCompare(b.description));
+    return Array.from(balances.values()).sort((a, b) => (a.item || a.description).localeCompare(b.item || b.description));
   }, [stockItems]);
 
   const getBalance = (description: string, unit: string) => {
@@ -147,18 +149,20 @@ export default function NewRequest() {
 
   const filteredStock = useMemo(() => {
     if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
     return stockBalances
-      .filter((entry) => entry.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter((entry) => entry.item.toLowerCase().includes(q) || entry.description.toLowerCase().includes(q))
       .slice(0, 8);
   }, [searchQuery, stockBalances]);
 
-  const handleSelectStockItem = (entry: { description: string; unit: string; qty: number }) => {
+  const handleSelectStockItem = (entry: { item: string; description: string; unit: string; qty: number }) => {
     setCurrentItem((prev) => ({
       ...prev,
-      name: entry.description,
+      name: entry.item || entry.description,
+      specification: entry.description,
       unit: entry.unit as Unit | '',
     }));
-    setSearchQuery(entry.description);
+    setSearchQuery(entry.item || entry.description);
   };
 
   const canAddItem = currentItem.category && currentItem.name && currentItem.quantity && currentItem.unit;
@@ -385,11 +389,16 @@ export default function NewRequest() {
                     {filteredStock.map((entry) => (
                       <button
                         type="button"
-                        key={`${entry.description}_${entry.unit}`}
+                        key={`${entry.item}_${entry.description}_${entry.unit}`}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex justify-between items-center"
                         onClick={() => handleSelectStockItem(entry)}
                       >
-                        <span className="truncate">{entry.description}</span>
+                        <div className="truncate">
+                          <span className="font-medium">{entry.item || entry.description}</span>
+                          {entry.item && entry.description && (
+                            <span className="text-muted-foreground ml-1 text-xs">({entry.description})</span>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground ml-2 shrink-0">
                           {entry.qty} {entry.unit}
                         </span>
