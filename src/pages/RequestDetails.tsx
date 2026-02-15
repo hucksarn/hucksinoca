@@ -288,13 +288,13 @@ const RequestDetails = () => {
                 <p className="text-xs text-muted-foreground">Required Date</p>
                 <p className="text-sm font-medium">
                   {request.required_date 
-                    ? format(new Date(request.required_date), 'PP')
+                    ? format(new Date(request.required_date), 'dd/MM/yyyy')
                     : 'Not specified'}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Created</p>
-                <p className="text-sm font-medium">{format(new Date(request.created_at), 'PP')}</p>
+                <p className="text-sm font-medium">{format(new Date(request.created_at), 'dd/MM/yyyy')}</p>
               </div>
               {request.remarks && (
                 <div className="col-span-2 lg:col-span-3">

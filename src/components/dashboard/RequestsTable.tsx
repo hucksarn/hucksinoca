@@ -79,7 +79,7 @@ export function RequestsTable({ requests, showActions = true }: RequestsTablePro
         </div>
         <div className="flex items-center gap-1 text-muted-foreground">
           <Clock className="h-3 w-3" />
-          {format(new Date(request.created_at), 'MMM d')}
+          {format(new Date(request.created_at), 'dd/MM/yyyy')}
         </div>
       </div>
 
@@ -205,7 +205,7 @@ export function RequestsTable({ requests, showActions = true }: RequestsTablePro
                   <td>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                       <Clock className="h-3.5 w-3.5" />
-                      {format(new Date(request.created_at), 'MMM d, yyyy')}
+                      {format(new Date(request.created_at), 'dd/MM/yyyy')}
                     </div>
                   </td>
                   {showActions && (

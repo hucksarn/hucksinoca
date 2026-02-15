@@ -174,7 +174,7 @@ export default function Approvals() {
                   <div className="flex items-center gap-1.5 col-span-2 md:col-span-1">
                     <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
                     <span className="text-foreground">{requestItems[request.id]?.length || 0} items</span>
-                    <span className="text-muted-foreground text-[10px] md:text-xs ml-auto md:ml-0">{format(new Date(request.created_at), 'MMM d')}</span>
+                    <span className="text-muted-foreground text-[10px] md:text-xs ml-auto md:ml-0">{format(new Date(request.created_at), 'dd/MM/yyyy')}</span>
                   </div>
                 </div>
               </div>
