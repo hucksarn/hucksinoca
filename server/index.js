@@ -54,7 +54,7 @@ app.post('/api/auth/change-password', authMiddleware, (req, res) => {
   if (!verifyPassword(currentPassword, user.password_hash)) {
     return res.status(400).json({ error: 'Current password is incorrect' });
   }
-  db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = datetime("now") WHERE id = ?')
+  db.prepare("UPDATE users SET password_hash = ?, must_change_password = 0, updated_at = datetime('now') WHERE id = ?")
     .run(hashPassword(newPassword), req.user.id);
   res.json({ success: true });
 });
