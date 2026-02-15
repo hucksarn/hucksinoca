@@ -62,7 +62,7 @@ export default function NewRequest() {
   const { data: categories = [], isLoading: categoriesLoading } = useMaterialCategories();
   const createRequest = useCreateMaterialRequest();
   const createProject = useCreateProject();
-  const [stockItems, setStockItems] = useState<Array<{ item: string; description: string; qty: number; unit: string }>>([]);
+  const [stockItems, setStockItems] = useState<Array<{ item: string; description: string; qty: number; unit: string; category: string }>>([]);
   const [loadingStock, setLoadingStock] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -107,6 +107,7 @@ export default function NewRequest() {
               description: String(i.description || '').trim(),
               qty: Number(i.qty || 0),
               unit: String(i.unit || '').trim(),
+              category: String(i.category || '').trim(),
             })),
           );
         }
@@ -125,7 +126,7 @@ export default function NewRequest() {
   }, [toast]);
 
   const stockBalances = useMemo(() => {
-    const balances = new Map<string, { item: string; description: string; unit: string; qty: number }>();
+    const balances = new Map<string, { item: string; description: string; unit: string; qty: number; category: string }>();
     for (const si of stockItems) {
       const name = si.item || si.description;
       if (!name) continue;
@@ -134,7 +135,7 @@ export default function NewRequest() {
       if (current) {
         current.qty += si.qty;
       } else {
-        balances.set(key, { item: si.item, description: si.description, unit: si.unit, qty: si.qty });
+        balances.set(key, { item: si.item, description: si.description, unit: si.unit, qty: si.qty, category: si.category });
       }
     }
     return Array.from(balances.values()).sort((a, b) => (a.item || a.description).localeCompare(b.item || b.description));
@@ -155,12 +156,13 @@ export default function NewRequest() {
       .slice(0, 8);
   }, [searchQuery, stockBalances]);
 
-  const handleSelectStockItem = (entry: { item: string; description: string; unit: string; qty: number }) => {
+  const handleSelectStockItem = (entry: { item: string; description: string; unit: string; qty: number; category: string }) => {
     setCurrentItem((prev) => ({
       ...prev,
       name: entry.item || entry.description,
       specification: entry.description,
       unit: entry.unit as Unit | '',
+      category: entry.category || prev.category,
     }));
     setSearchQuery(entry.item || entry.description);
   };

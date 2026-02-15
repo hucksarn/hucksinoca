@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Plus, Upload, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isLocalMode, stockApi as stockApiLocal, getAuthToken } from '@/lib/api';
+import { useMaterialCategories } from '@/hooks/useDatabase';
 import * as XLSX from 'xlsx';
 
 type StockItem = {
@@ -21,6 +22,7 @@ type StockItem = {
   description: string;
   qty: number;
   unit: string;
+  category: string;
 };
 
 type UploadRow = {
@@ -29,6 +31,7 @@ type UploadRow = {
   description: string;
   qty: number;
   unit: string;
+  category: string;
 };
 
 async function stockApiFetch(method: 'GET' | 'POST', body?: any) {
@@ -58,13 +61,14 @@ async function stockApiFetch(method: 'GET' | 'POST', body?: any) {
 
 export default function Stock() {
   const { toast } = useToast();
+  const { data: categories = [] } = useMaterialCategories();
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [loadingStock, setLoadingStock] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadRows, setUploadRows] = useState<UploadRow[]>([]);
   const [manualRows, setManualRows] = useState<UploadRow[]>([
-    { id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '' },
+    { id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '', category: '' },
   ]);
   const [activeTab, setActiveTab] = useState<'manual' | 'excel'>('manual');
 
@@ -101,6 +105,7 @@ export default function Stock() {
           description: String(description).trim(),
           qty: Number(qty) || 0,
           unit: String(unit).trim(),
+          category: String(row.Category || row.category || row.CATEGORY || '').trim(),
         };
       })
       .filter(Boolean) as UploadRow[];
@@ -132,7 +137,7 @@ export default function Stock() {
       const data = await stockApiFetch('POST', { items: rows });
       setStockItems(Array.isArray(data.items) ? data.items : []);
       setUploadRows([]);
-      setManualRows([{ id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '' }]);
+      setManualRows([{ id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '', category: '' }]);
       toast({ title: 'Stock Imported', description: `${rows.length} rows added to stock.` });
       setShowDialog(false);
     } catch (error) {
@@ -146,7 +151,7 @@ export default function Stock() {
   const handleAddManualRow = () => {
     setManualRows((prev) => [
       ...prev,
-      { id: `manual_${Date.now()}_${prev.length}`, item: '', description: '', qty: 0, unit: '' },
+      { id: `manual_${Date.now()}_${prev.length}`, item: '', description: '', qty: 0, unit: '', category: '' },
     ]);
   };
 
@@ -237,9 +242,10 @@ export default function Stock() {
                 <div className="border rounded-lg p-3">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                     <TableRow>
                         <TableHead>Item</TableHead>
                         <TableHead>Description</TableHead>
+                        <TableHead>Category</TableHead>
                         <TableHead>Qty</TableHead>
                         <TableHead>Unit</TableHead>
                         <TableHead className="w-10"></TableHead>
@@ -253,6 +259,12 @@ export default function Stock() {
                           </TableCell>
                           <TableCell>
                             <Input value={row.description} onChange={(e) => { const next = [...manualRows]; next[index] = { ...row, description: e.target.value }; setManualRows(next); }} />
+                          </TableCell>
+                          <TableCell className="w-40">
+                            <select className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm" value={row.category} onChange={(e) => { const next = [...manualRows]; next[index] = { ...row, category: e.target.value }; setManualRows(next); }}>
+                              <option value="">Select</option>
+                              {categories.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.name}</option>)}
+                            </select>
                           </TableCell>
                           <TableCell className="w-28">
                             <Input value={row.qty} onChange={(e) => { const next = [...manualRows]; next[index] = { ...row, qty: Number(e.target.value) || 0 }; setManualRows(next); }} />

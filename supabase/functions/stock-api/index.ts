@@ -79,6 +79,7 @@ serve(async (req) => {
         description: String(item.description || "").trim(),
         qty: action === "deduct" ? -Math.abs(Number(item.qty || 0)) : Number(item.qty || 0),
         unit: String(item.unit || "").trim(),
+        category: item.category ? String(item.category).trim() : null,
         created_by: user.id,
       }));
 
