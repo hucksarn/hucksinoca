@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Plus, Upload, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Upload, Loader2, Trash2, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isLocalMode, stockApi as stockApiLocal, getAuthToken } from '@/lib/api';
 import { useMaterialCategories } from '@/hooks/useDatabase';
@@ -71,6 +71,10 @@ export default function Stock() {
     { id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '', category: '' },
   ]);
   const [activeTab, setActiveTab] = useState<'manual' | 'excel'>('manual');
+
+  const [editItem, setEditItem] = useState<StockItem | null>(null);
+  const [editForm, setEditForm] = useState({ item: '', description: '', qty: 0, unit: '', category: '' });
+  const [saving, setSaving] = useState(false);
 
   const loadStock = async () => {
     try {
@@ -168,6 +172,49 @@ export default function Stock() {
 
   const hasManualRows = manualRows.some((row) => row.description.trim().length > 0);
 
+  const openEdit = (item: StockItem) => {
+    setEditItem(item);
+    setEditForm({
+      item: item.item || '',
+      description: item.description || '',
+      qty: item.qty,
+      unit: item.unit || '',
+      category: item.category || '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editItem) return;
+    setSaving(true);
+    try {
+      if (isLocalMode) {
+        // Local mode: not supported for edit
+        toast({ title: 'Not supported', description: 'Edit is not supported in local mode.', variant: 'destructive' });
+        return;
+      }
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { error } = await supabase
+        .from('stock_items')
+        .update({
+          item: editForm.item,
+          description: editForm.description,
+          qty: editForm.qty,
+          unit: editForm.unit,
+          category: editForm.category,
+        })
+        .eq('id', editItem.id);
+      if (error) throw error;
+      toast({ title: 'Updated', description: 'Stock item updated successfully.' });
+      setEditItem(null);
+      await loadStock();
+    } catch (error: any) {
+      console.error('[Stock] Edit error:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to update stock item.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <MainLayout title="Stock" subtitle="Store items inventory">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -196,12 +243,13 @@ export default function Stock() {
                 <TableHead>Category</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>Unit</TableHead>
+                <TableHead className="w-16">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {stockItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No stock items yet.
                   </TableCell>
                 </TableRow>
@@ -214,6 +262,11 @@ export default function Stock() {
                     <TableCell className="text-xs">{item.category || '—'}</TableCell>
                     <TableCell>{item.qty}</TableCell>
                     <TableCell>{item.unit}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(item)} title="Edit">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -221,6 +274,53 @@ export default function Stock() {
           </Table>
         )}
       </div>
+
+      <Dialog open={!!editItem} onOpenChange={(open) => { if (!open) setEditItem(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Stock Item</DialogTitle>
+            <DialogDescription>Update the details for this stock item.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Item</label>
+              <Input value={editForm.item} onChange={(e) => setEditForm({ ...editForm, item: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Description</label>
+              <Input value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Category</label>
+              <select
+                className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm"
+                value={editForm.category}
+                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+              >
+                <option value="">Select</option>
+                {categories.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Qty</label>
+                <Input type="number" value={editForm.qty} onChange={(e) => setEditForm({ ...editForm, qty: Number(e.target.value) || 0 })} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Unit</label>
+                <Input value={editForm.unit} onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-3">
+            <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+            <Button variant="accent" onClick={handleSaveEdit} disabled={saving} className="gap-2">
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-3xl max-h-[85vh] !flex !flex-col overflow-hidden">
