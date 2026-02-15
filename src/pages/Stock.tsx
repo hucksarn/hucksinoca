@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,10 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Plus, Upload, Loader2 } from 'lucide-react';
+import { Plus, Upload, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 
@@ -29,20 +27,6 @@ type StockItem = {
   description: string;
   qty: number;
   unit: string;
-};
-
-type ShipmentItem = {
-  description: string;
-  qty: number;
-  unit: string;
-};
-
-type Shipment = {
-  id: string;
-  reference?: string;
-  date?: string;
-  status?: string;
-  items?: ShipmentItem[];
 };
 
 type UploadRow = {
@@ -55,19 +39,13 @@ type UploadRow = {
 export default function Stock() {
   const { toast } = useToast();
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
-  const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loadingStock, setLoadingStock] = useState(true);
-  const [loadingShipments, setLoadingShipments] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
-  const [selectedShipmentId, setSelectedShipmentId] = useState('');
-  const [submittingShipment, setSubmittingShipment] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadRows, setUploadRows] = useState<UploadRow[]>([]);
-
-  const selectedShipment = useMemo(
-    () => shipments.find((shipment) => shipment.id === selectedShipmentId),
-    [shipments, selectedShipmentId],
-  );
+  const [manualRows, setManualRows] = useState<UploadRow[]>([
+    { id: `manual_${Date.now()}`, description: '', qty: 0, unit: '' },
+  ]);
 
   const loadStock = async () => {
     try {
@@ -85,63 +63,9 @@ export default function Stock() {
     }
   };
 
-  const loadShipments = async () => {
-    try {
-      const response = await fetch('/api/shipments');
-      const data = await response.json();
-      setShipments(Array.isArray(data.shipments) ? data.shipments : []);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load shipments',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingShipments(false);
-    }
-  };
-
   useEffect(() => {
     void loadStock();
-    void loadShipments();
   }, []);
-
-  const handleAddFromShipment = async () => {
-    if (!selectedShipmentId) {
-      toast({
-        title: 'Select Shipment',
-        description: 'Please choose a shipment first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSubmittingShipment(true);
-    try {
-      const response = await fetch('/api/grn', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shipmentId: selectedShipmentId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to apply GRN');
-      }
-
-      const data = await response.json();
-      setStockItems(Array.isArray(data.items) ? data.items : []);
-      toast({ title: 'Stock Updated', description: 'Shipment items added to stock.' });
-      setShowDialog(false);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Could not add shipment to stock.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSubmittingShipment(false);
-    }
-  };
 
   const parseExcel = async (file: File) => {
     const buffer = await file.arrayBuffer();
@@ -187,11 +111,11 @@ export default function Stock() {
     }
   };
 
-  const handleImportRows = async () => {
-    if (uploadRows.length === 0) {
+  const handleImportRows = async (rows: UploadRow[]) => {
+    if (rows.length === 0) {
       toast({
         title: 'No Data',
-        description: 'Upload an Excel file with stock rows.',
+        description: 'Add at least one stock row.',
         variant: 'destructive',
       });
       return;
@@ -202,7 +126,7 @@ export default function Stock() {
       const response = await fetch('/api/stock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: uploadRows }),
+        body: JSON.stringify({ items: rows }),
       });
       if (!response.ok) {
         throw new Error('Failed to import stock');
@@ -210,6 +134,7 @@ export default function Stock() {
       const data = await response.json();
       setStockItems(Array.isArray(data.items) ? data.items : []);
       setUploadRows([]);
+      setManualRows([{ id: `manual_${Date.now()}`, description: '', qty: 0, unit: '' }]);
       toast({ title: 'Stock Imported', description: 'Excel rows added to stock.' });
       setShowDialog(false);
     } catch (error) {
@@ -221,6 +146,29 @@ export default function Stock() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleAddManualRow = () => {
+    setManualRows((prev) => [
+      ...prev,
+      { id: `manual_${Date.now()}_${prev.length}`, description: '', qty: 0, unit: '' },
+    ]);
+  };
+
+  const handleRemoveManualRow = (id: string) => {
+    setManualRows((prev) => prev.filter((row) => row.id !== id));
+  };
+
+  const handleSaveManual = () => {
+    const cleaned = manualRows
+      .map((row) => ({
+        ...row,
+        description: row.description.trim(),
+        unit: row.unit.trim(),
+      }))
+      .filter((row) => row.description.length > 0);
+
+    void handleImportRows(cleaned);
   };
 
   return (
@@ -278,66 +226,87 @@ export default function Stock() {
           <DialogHeader>
             <DialogTitle>Add GRN</DialogTitle>
             <DialogDescription>
-              Add stock from an incoming shipment or import via Excel.
+              Add stock items manually or import via Excel.
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="shipment" className="space-y-4">
+          <Tabs defaultValue="manual" className="space-y-4">
             <TabsList className="w-full">
-              <TabsTrigger value="shipment" className="flex-1">From Shipment</TabsTrigger>
+              <TabsTrigger value="manual" className="flex-1">Manual Entry</TabsTrigger>
               <TabsTrigger value="excel" className="flex-1">Upload Excel</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="shipment" className="space-y-4">
-              {loadingShipments ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <>
-                  <Select value={selectedShipmentId} onValueChange={setSelectedShipmentId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a shipment" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {shipments.length === 0 ? (
-                        <SelectItem value="empty" disabled>No shipments available</SelectItem>
-                      ) : (
-                        shipments.map((shipment) => (
-                          <SelectItem key={shipment.id} value={shipment.id}>
-                            {shipment.reference || shipment.id} {shipment.status === 'received' ? '(Received)' : ''}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+            <TabsContent value="manual" className="space-y-4">
+              <div className="border rounded-lg p-3">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Qty</TableHead>
+                      <TableHead>Unit</TableHead>
+                      <TableHead className="w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {manualRows.map((row, index) => (
+                      <TableRow key={row.id}>
+                        <TableCell>
+                          <Input
+                            value={row.description}
+                            onChange={(event) => {
+                              const next = [...manualRows];
+                              next[index] = { ...row, description: event.target.value };
+                              setManualRows(next);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="w-28">
+                          <Input
+                            value={row.qty}
+                            onChange={(event) => {
+                              const next = [...manualRows];
+                              next[index] = { ...row, qty: Number(event.target.value) || 0 };
+                              setManualRows(next);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="w-32">
+                          <Input
+                            value={row.unit}
+                            onChange={(event) => {
+                              const next = [...manualRows];
+                              next[index] = { ...row, unit: event.target.value };
+                              setManualRows(next);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="w-10 text-right">
+                          {manualRows.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveManualRow(row.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-                  <div className="border rounded-lg p-3 text-sm">
-                    {selectedShipment?.items?.length ? (
-                      <div className="space-y-2">
-                        {selectedShipment.items.map((item, index) => (
-                          <div key={`${item.description}-${index}`} className="flex justify-between">
-                            <span>{item.description}</span>
-                            <span className="text-muted-foreground">{item.qty} {item.unit}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">No items to display.</p>
-                    )}
-                  </div>
-
-                  <Button
-                    variant="accent"
-                    onClick={handleAddFromShipment}
-                    disabled={submittingShipment || !selectedShipmentId || selectedShipmentId === 'empty'}
-                    className="gap-2"
-                  >
-                    {submittingShipment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                    Add to Stock
-                  </Button>
-                </>
-              )}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <Button variant="outline" onClick={handleAddManualRow} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Row
+                </Button>
+                <Button variant="accent" onClick={handleSaveManual} disabled={uploading} className="gap-2">
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Save to Stock
+                </Button>
+              </div>
             </TabsContent>
 
             <TabsContent value="excel" className="space-y-4">
@@ -401,7 +370,11 @@ export default function Stock() {
                 <p className="text-sm text-muted-foreground">Upload an Excel file to preview rows.</p>
               )}
 
-              <Button variant="accent" onClick={handleImportRows} disabled={uploading || uploadRows.length === 0}>
+              <Button
+                variant="accent"
+                onClick={() => handleImportRows(uploadRows)}
+                disabled={uploading || uploadRows.length === 0}
+              >
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Import to Stock
               </Button>
