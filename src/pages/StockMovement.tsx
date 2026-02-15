@@ -7,9 +7,12 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Plus, Upload, Loader2, Trash2, Pencil } from 'lucide-react';
+import { Plus, Upload, Loader2, Trash2, Pencil, ChevronDown, ChevronRight, User, Building2, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isLocalMode, stockApi as stockApiLocal } from '@/lib/api';
 import { useMaterialCategories } from '@/hooks/useDatabase';
@@ -23,6 +26,7 @@ type StockItem = {
   qty: number;
   unit: string;
   category: string;
+  request_id?: string | null;
 };
 
 type UploadRow = {
@@ -75,10 +79,52 @@ export default function StockMovement() {
   const [editForm, setEditForm] = useState({ item: '', description: '', qty: 0, unit: '', category: '' });
   const [saving, setSaving] = useState(false);
 
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [requestDetails, setRequestDetails] = useState<Record<string, { request_number: string; requester_name: string; project_name: string; remarks: string | null; request_type: string }>>({});
+
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   const loadStock = async () => {
     try {
       const data = await stockApiFetch('GET');
-      setStockItems(Array.isArray(data.items) ? data.items : []);
+      const items = Array.isArray(data.items) ? data.items : [];
+      setStockItems(items);
+      // Fetch request details for outgoing items
+      const requestIds = items.filter((i: StockItem) => i.qty < 0 && i.request_id).map((i: StockItem) => i.request_id as string).filter((v, i, a) => a.indexOf(v) === i);
+      if (requestIds.length > 0 && !isLocalMode) {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: requests } = await supabase
+          .from('material_requests')
+          .select('id, request_number, requester_id, project_id, remarks, request_type')
+          .in('id', requestIds);
+        if (requests) {
+          const projectIds = [...new Set(requests.map(r => r.project_id))];
+          const requesterIds = [...new Set(requests.map(r => r.requester_id))];
+          const [{ data: projects }, { data: profiles }] = await Promise.all([
+            supabase.from('projects').select('id, name').in('id', projectIds),
+            supabase.from('profiles').select('user_id, full_name').in('user_id', requesterIds),
+          ]);
+          const projectMap = Object.fromEntries((projects || []).map(p => [p.id, p.name]));
+          const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p.full_name]));
+          const details: typeof requestDetails = {};
+          for (const r of requests) {
+            details[r.id] = {
+              request_number: r.request_number,
+              requester_name: profileMap[r.requester_id] || 'Unknown',
+              project_name: projectMap[r.project_id] || 'Unknown',
+              remarks: r.remarks,
+              request_type: r.request_type,
+            };
+          }
+          setRequestDetails(details);
+        }
+      }
     } catch (error) {
       console.error('[Stock] Load error:', error);
       toast({ title: 'Error', description: 'Failed to load stock items', variant: 'destructive' });
@@ -253,22 +299,50 @@ export default function StockMovement() {
                   </TableCell>
                 </TableRow>
               ) : (
-                stockItems.map((item, index) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell className="text-xs">{item.date || '—'}</TableCell>
-                    <TableCell>{item.item || `Item ${index + 1}`}</TableCell>
-                    <TableCell className="font-medium">{item.description}</TableCell>
-                    <TableCell className="text-xs">{item.category || '—'}</TableCell>
-                    <TableCell className={item.qty < 0 ? 'text-destructive font-medium' : ''}>{item.qty}</TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(item)} title="Edit">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                stockItems.map((item, index) => {
+                  const isOutgoing = item.qty < 0;
+                  const hasDetails = isOutgoing && item.request_id && requestDetails[item.request_id];
+                  const details = item.request_id ? requestDetails[item.request_id] : null;
+                  const isExpanded = expandedRows.has(item.id);
+
+                  return (
+                    <>
+                      <TableRow key={item.id} className={isOutgoing ? 'bg-destructive/5' : ''}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="text-xs">{item.date || '—'}</TableCell>
+                        <TableCell>{item.item || `Item ${index + 1}`}</TableCell>
+                        <TableCell className="font-medium">{item.description}</TableCell>
+                        <TableCell className="text-xs">{item.category || '—'}</TableCell>
+                        <TableCell className={isOutgoing ? 'text-destructive font-medium' : ''}>{item.qty}</TableCell>
+                        <TableCell>{item.unit}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-0.5">
+                            {hasDetails && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleRow(item.id)} title="Details">
+                                {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)} title="Edit">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && details && (
+                        <TableRow key={`${item.id}-details`} className="bg-muted/30">
+                          <TableCell colSpan={8} className="py-2 px-6">
+                            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                              <span className="flex items-center gap-1.5"><FileText className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">Req:</span> <span className="font-medium">{details.request_number}</span></span>
+                              <span className="flex items-center gap-1.5"><User className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">By:</span> {details.requester_name}</span>
+                              <span className="flex items-center gap-1.5"><Building2 className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">Site:</span> {details.project_name}</span>
+                              {details.remarks && <span className="flex items-center gap-1.5"><span className="text-muted-foreground">Remarks:</span> {details.remarks}</span>}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  );
+                })
               )}
             </TableBody>
           </Table>

@@ -81,6 +81,7 @@ serve(async (req) => {
         unit: String(item.unit || "").trim(),
         category: item.category ? String(item.category).trim() : null,
         created_by: user.id,
+        request_id: item.request_id || null,
       }));
 
       const { error: insertError } = await serviceClient

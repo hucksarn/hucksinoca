@@ -267,6 +267,7 @@ export type Database = {
           id: string
           item: string | null
           qty: number
+          request_id: string | null
           unit: string | null
         }
         Insert: {
@@ -278,6 +279,7 @@ export type Database = {
           id?: string
           item?: string | null
           qty?: number
+          request_id?: string | null
           unit?: string | null
         }
         Update: {
@@ -289,9 +291,18 @@ export type Database = {
           id?: string
           item?: string | null
           qty?: number
+          request_id?: string | null
           unit?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stock_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "material_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
