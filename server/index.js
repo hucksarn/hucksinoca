@@ -61,7 +61,7 @@ app.post('/api/stock', async (req, res) => {
   const stock = await readJson(stockFile, []);
   const normalized = items.map((item) => ({
     id: createId('stock'),
-    date: item.date || todayISO(),
+    date: item.date ?? '',
     description: item.description || '',
     qty: Number(item.qty) || 0,
     unit: item.unit || '',
