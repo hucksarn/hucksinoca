@@ -10,6 +10,7 @@ import {
   LogOut,
   Building2,
   Package,
+  ArrowLeftRight,
   ChevronDown,
   Search
 } from 'lucide-react';
@@ -34,6 +35,7 @@ export function Sidebar() {
   const manageNav = [
     { name: 'Projects', href: '/projects', icon: Building2, adminOnly: true },
     { name: 'Stock', href: '/stock', icon: Package, adminOnly: true },
+    { name: 'Stock Movement', href: '/stock-movement', icon: ArrowLeftRight, adminOnly: true },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
