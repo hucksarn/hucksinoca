@@ -17,7 +17,7 @@ import { Loader2, ArrowLeft, Trash2, Check } from 'lucide-react';
 import { useMaterialRequests, useMaterialRequestItems, useDeleteMaterialRequest, useApproveRequest } from '@/hooks/useDatabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { formatDatePKT } from '@/lib/dateUtils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -288,13 +288,13 @@ const RequestDetails = () => {
                 <p className="text-xs text-muted-foreground">Required Date</p>
                 <p className="text-sm font-medium">
                   {request.required_date 
-                    ? format(new Date(request.required_date), 'dd/MM/yyyy')
+                    ? formatDatePKT(request.required_date, false)
                     : 'Not specified'}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Created</p>
-                <p className="text-sm font-medium">{format(new Date(request.created_at), 'dd/MM/yyyy')}</p>
+                <p className="text-sm font-medium">{formatDatePKT(request.created_at)}</p>
               </div>
               {request.remarks && (
                 <div className="col-span-2 lg:col-span-3">

@@ -2,7 +2,7 @@ import { CheckCircle, XCircle, Clock, FileText, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { isLocalMode, requestsApi } from '@/lib/api';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativePKT } from '@/lib/dateUtils';
 
 interface ActivityItem {
   id: string;
@@ -33,7 +33,7 @@ export function RecentActivity() {
             id: `request-${req.id}`,
             type: req.status === 'submitted' ? 'submitted' : req.status === 'approved' ? 'approved' : 'updated',
             message: `${req.request_number} ${req.status === 'draft' ? 'created as draft' : req.status} by ${req.requester_name || 'Unknown'}`,
-            time: formatDistanceToNow(new Date(req.created_at), { addSuffix: true }),
+            time: formatRelativePKT(req.created_at),
           });
         }
         return items;
@@ -56,7 +56,7 @@ export function RecentActivity() {
             id: `approval-${approval.id}`,
             type: approval.action === 'approve' ? 'approved' : 'rejected',
             message: `${requestNum} ${approval.action === 'approve' ? 'approved' : 'rejected'} by ${approverName}`,
-            time: formatDistanceToNow(new Date(approval.created_at), { addSuffix: true }),
+            time: formatRelativePKT(approval.created_at),
           });
         });
       }
@@ -74,7 +74,7 @@ export function RecentActivity() {
             id: `request-${req.id}`,
             type: req.status === 'submitted' ? 'submitted' : 'updated',
             message: `${req.request_number} ${req.status === 'draft' ? 'created as draft' : 'submitted'} by ${requesterName}`,
-            time: formatDistanceToNow(new Date(req.created_at), { addSuffix: true }),
+            time: formatRelativePKT(req.created_at),
           });
         });
       }
