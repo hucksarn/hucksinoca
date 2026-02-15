@@ -314,7 +314,7 @@ export default function Stock() {
 
             <TabsContent value="excel" className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} />
+                <Input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} />
                 <Button variant="outline" className="gap-2" disabled={uploading}>
                   <Upload className="h-4 w-4" />
                   Upload
