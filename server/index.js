@@ -46,10 +46,11 @@ function createId(prefix) {
 function computeBalances(entries) {
   const balances = new Map();
   for (const entry of entries) {
+    const item = String(entry.item || '').trim();
     const description = String(entry.description || '').trim();
     const unit = String(entry.unit || '').trim();
     if (!description) continue;
-    const key = `${description}__${unit}`;
+    const key = `${item}__${description}__${unit}`;
     const current = balances.get(key) || 0;
     balances.set(key, current + Number(entry.qty || 0));
   }
@@ -75,6 +76,7 @@ app.post('/api/stock', async (req, res) => {
   const normalized = items.map((item) => ({
     id: createId('stock'),
     date: item.date ?? '',
+    item: item.item || '',
     description: item.description || '',
     qty: Number(item.qty) || 0,
     unit: item.unit || '',
@@ -95,6 +97,7 @@ app.post('/api/stock/deduct', async (req, res) => {
   const balances = computeBalances(stock);
 
   for (const item of items) {
+    const itemName = String(item.item || '').trim();
     const description = String(item.description || '').trim();
     const unit = String(item.unit || '').trim();
     const qty = Number(item.qty || 0);
@@ -103,7 +106,7 @@ app.post('/api/stock/deduct', async (req, res) => {
       return res.status(400).json({ error: 'Each item requires description, unit, qty > 0' });
     }
 
-    const key = `${description}__${unit}`;
+    const key = `${itemName}__${description}__${unit}`;
     const available = balances.get(key) || 0;
     if (available < qty) {
       return res.status(400).json({
@@ -117,6 +120,7 @@ app.post('/api/stock/deduct', async (req, res) => {
   const deductions = items.map((item) => ({
     id: createId('stock'),
     date: item.date ?? '',
+    item: String(item.item || '').trim(),
     description: String(item.description || '').trim(),
     qty: -Math.abs(Number(item.qty || 0)),
     unit: String(item.unit || '').trim(),

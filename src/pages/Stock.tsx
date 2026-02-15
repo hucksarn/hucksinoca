@@ -25,6 +25,7 @@ import * as XLSX from 'xlsx';
 type StockItem = {
   id: string;
   date?: string;
+  item?: string;
   description: string;
   qty: number;
   unit: string;
@@ -32,6 +33,7 @@ type StockItem = {
 
 type UploadRow = {
   id: string;
+  item: string;
   description: string;
   qty: number;
   unit: string;
@@ -45,14 +47,14 @@ export default function Stock() {
   const [uploading, setUploading] = useState(false);
   const [uploadRows, setUploadRows] = useState<UploadRow[]>([]);
   const [manualRows, setManualRows] = useState<UploadRow[]>([
-    { id: `manual_${Date.now()}`, description: '', qty: 0, unit: '' },
+    { id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '' },
   ]);
 
   const loadStock = async () => {
     try {
       const response = await fetch('/api/stock');
       const data = await response.json();
-      setStockItems(Array.isArray(data.items) ? data.items : []);
+          setStockItems(Array.isArray(data.items) ? data.items : []);
     } catch (error) {
       toast({
         title: 'Error',
@@ -76,6 +78,7 @@ export default function Stock() {
 
     const normalized = rows
       .map((row, index) => {
+        const item = row.Item || row.item || row.ITEM || '';
         const description = row.Description || row.description || row.DESC || row.desc || '';
         const qty = row.Qty ?? row.qty ?? row.QTY ?? row.Quantity ?? row.quantity ?? '';
         const unit = row.Unit || row.unit || row.UOM || row.uom || '';
@@ -84,6 +87,7 @@ export default function Stock() {
 
         return {
           id: `upload_${Date.now()}_${index}`,
+          item: String(item).trim(),
           description: String(description).trim(),
           qty: Number(qty) || 0,
           unit: String(unit).trim(),
@@ -135,7 +139,7 @@ export default function Stock() {
       const data = await response.json();
       setStockItems(Array.isArray(data.items) ? data.items : []);
       setUploadRows([]);
-      setManualRows([{ id: `manual_${Date.now()}`, description: '', qty: 0, unit: '' }]);
+      setManualRows([{ id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '' }]);
       toast({ title: 'Stock Imported', description: 'Excel rows added to stock.' });
       setShowDialog(false);
     } catch (error) {
@@ -152,7 +156,7 @@ export default function Stock() {
   const handleAddManualRow = () => {
     setManualRows((prev) => [
       ...prev,
-      { id: `manual_${Date.now()}_${prev.length}`, description: '', qty: 0, unit: '' },
+      { id: `manual_${Date.now()}_${prev.length}`, item: '', description: '', qty: 0, unit: '' },
     ]);
   };
 
@@ -164,6 +168,7 @@ export default function Stock() {
     const cleaned = manualRows
       .map((row) => ({
         ...row,
+        item: row.item.trim(),
         description: row.description.trim(),
         unit: row.unit.trim(),
       }))
@@ -196,9 +201,10 @@ export default function Stock() {
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>Item</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Unit</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Qty</TableHead>
+                    <TableHead>Unit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,8 +218,8 @@ export default function Stock() {
                 stockItems.map((item, index) => (
                   <TableRow key={item.id}>
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell>{`Item ${index + 1}`}</TableCell>
-                    <TableCell className="font-medium">{item.description}</TableCell>
+                  <TableCell>{item.item || `Item ${index + 1}`}</TableCell>
+                  <TableCell className="font-medium">{item.description}</TableCell>
                     <TableCell>{item.qty}</TableCell>
                     <TableCell>{item.unit}</TableCell>
                   </TableRow>
@@ -244,21 +250,32 @@ export default function Stock() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Unit</TableHead>
-                      <TableHead className="w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {manualRows.map((row, index) => (
-                      <TableRow key={row.id}>
-                        <TableCell>
-                          <Input
-                            value={row.description}
-                            onChange={(event) => {
-                              const next = [...manualRows];
-                              next[index] = { ...row, description: event.target.value };
+                <TableHead>Item</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Qty</TableHead>
+                <TableHead>Unit</TableHead>
+                <TableHead className="w-10"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {manualRows.map((row, index) => (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    <Input
+                      value={row.item}
+                      onChange={(event) => {
+                        const next = [...manualRows];
+                        next[index] = { ...row, item: event.target.value };
+                        setManualRows(next);
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      value={row.description}
+                      onChange={(event) => {
+                        const next = [...manualRows];
+                        next[index] = { ...row, description: event.target.value };
                               setManualRows(next);
                             }}
                           />
@@ -328,7 +345,7 @@ export default function Stock() {
                 </a>
               </div>
               <p className="text-xs text-muted-foreground">
-                Required columns: <span className="font-medium">Description, Qty, Unit</span>
+                Required columns: <span className="font-medium">Item, Description, Qty, Unit</span>
               </p>
 
               {uploadRows.length > 0 ? (
@@ -336,6 +353,7 @@ export default function Stock() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Item</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Qty</TableHead>
                         <TableHead>Unit</TableHead>
@@ -344,6 +362,16 @@ export default function Stock() {
                     <TableBody>
                       {uploadRows.map((row, index) => (
                         <TableRow key={row.id}>
+                          <TableCell>
+                            <Input
+                              value={row.item}
+                              onChange={(event) => {
+                                const next = [...uploadRows];
+                                next[index] = { ...row, item: event.target.value };
+                                setUploadRows(next);
+                              }}
+                            />
+                          </TableCell>
                           <TableCell>
                             <Input
                               value={row.description}

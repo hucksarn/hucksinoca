@@ -1,4 +1,4 @@
-Description,Qty,Unit
-Portland Cement 50kg,120,bags
-Rebar 12mm,340,pcs
-Plywood 18mm,64,sheets
+Item,Description,Qty,Unit
+Cement,Portland Cement 50kg,120,bags
+Rebar,Rebar 12mm,340,pcs
+Plywood,Plywood 18mm,64,sheets
