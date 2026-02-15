@@ -2,7 +2,7 @@ import { MaterialRequest, useDeleteMaterialRequest } from '@/hooks/useDatabase';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Eye, Clock, AlertTriangle, Trash2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDatePKT } from '@/lib/dateUtils';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
@@ -79,7 +79,7 @@ export function RequestsTable({ requests, showActions = true }: RequestsTablePro
         </div>
         <div className="flex items-center gap-1 text-muted-foreground">
           <Clock className="h-3 w-3" />
-          {format(new Date(request.created_at), 'dd/MM/yyyy')}
+          {formatDatePKT(request.created_at)}
         </div>
       </div>
 
@@ -205,7 +205,7 @@ export function RequestsTable({ requests, showActions = true }: RequestsTablePro
                   <td>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                       <Clock className="h-3.5 w-3.5" />
-                      {format(new Date(request.created_at), 'dd/MM/yyyy')}
+                      {formatDatePKT(request.created_at)}
                     </div>
                   </td>
                   {showActions && (
