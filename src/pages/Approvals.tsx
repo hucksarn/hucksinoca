@@ -5,34 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { 
-  Check, 
-  X, 
-  Clock, 
-  AlertTriangle, 
-  Eye,
-  User,
-  Building2,
-  Package,
-  Loader2
+  Check, X, Clock, AlertTriangle, Eye, User, Building2, Package, Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { usePendingApprovals, useApproveRequest, useRejectRequest, MaterialRequest, useMaterialRequestItems, MaterialRequestItem } from '@/hooks/useDatabase';
+import { isLocalMode, requestsApi, stockApi as stockApiLocal, getAuthToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -49,27 +33,27 @@ export default function Approvals() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [requestItems, setRequestItems] = useState<Record<string, MaterialRequestItem[]>>({});
 
-  // Fetch items for all pending requests
   useEffect(() => {
     const fetchItems = async () => {
       const items: Record<string, MaterialRequestItem[]> = {};
       for (const request of pendingRequests) {
-        const { data } = await import('@/integrations/supabase/client').then(m => 
-          m.supabase
+        if (isLocalMode) {
+          try {
+            const detail = await requestsApi.get(request.id);
+            if (detail.items) items[request.id] = detail.items;
+          } catch { /* ignore */ }
+        } else {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data } = await supabase
             .from('material_request_items')
             .select('*')
-            .eq('request_id', request.id)
-        );
-        if (data) {
-          items[request.id] = data as MaterialRequestItem[];
+            .eq('request_id', request.id);
+          if (data) items[request.id] = data as MaterialRequestItem[];
         }
       }
       setRequestItems(items);
     };
-    
-    if (pendingRequests.length > 0) {
-      fetchItems();
-    }
+    if (pendingRequests.length > 0) fetchItems();
   }, [pendingRequests]);
 
   const handleAction = (request: MaterialRequest, action: 'approve' | 'reject') => {
@@ -81,36 +65,34 @@ export default function Approvals() {
 
   const confirmAction = async () => {
     if (!selectedRequest || !actionType) return;
-
     setIsProcessing(true);
     
     try {
       if (actionType === 'approve') {
         if (requestType === 'stock_request') {
           const itemsToDeduct = (requestItems[selectedRequest.id] || []).map((item) => ({
-            description: item.name,
-            qty: item.quantity,
-            unit: item.unit,
+            description: item.name, qty: item.quantity, unit: item.unit,
           }));
 
           if (itemsToDeduct.length > 0) {
-            const response = await fetch('/api/stock/deduct', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ items: itemsToDeduct }),
-            });
-
-            if (!response.ok) {
-              const data = await response.json().catch(() => ({}));
-              throw new Error(data.error || 'Failed to deduct stock');
+            if (isLocalMode) {
+              await stockApiLocal.deduct(itemsToDeduct);
+            } else {
+              const response = await fetch('/api/stock/deduct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: itemsToDeduct }),
+              });
+              if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to deduct stock');
+              }
             }
           }
         }
 
         await approveRequest.mutateAsync({ 
-          requestId: selectedRequest.id, 
-          comment: comment || undefined,
-          requestType: requestType
+          requestId: selectedRequest.id, comment: comment || undefined, requestType,
         });
       } else {
         await rejectRequest.mutateAsync({ requestId: selectedRequest.id, comment });
@@ -121,11 +103,7 @@ export default function Approvals() {
         description: `${selectedRequest.request_number} has been ${actionType === 'approve' ? 'approved' : 'rejected'}.`,
       });
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to process request',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message || 'Failed to process request', variant: 'destructive' });
     } finally {
       setIsProcessing(false);
       setSelectedRequest(null);
@@ -138,18 +116,13 @@ export default function Approvals() {
   if (isLoading) {
     return (
       <MainLayout title="Pending Approvals" subtitle="Review and approve material requests">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       </MainLayout>
     );
   }
 
   return (
-    <MainLayout 
-      title="Pending Approvals" 
-      subtitle="Review and approve material requests"
-    >
+    <MainLayout title="Pending Approvals" subtitle="Review and approve material requests">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3 md:mb-6">
         <div className="p-2 md:p-4 rounded-lg md:rounded-xl bg-warning/10 border border-warning/20">
@@ -165,9 +138,7 @@ export default function Approvals() {
           <div className="flex items-center gap-1.5 md:gap-3">
             <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
             <div className="min-w-0">
-              <p className="text-base md:text-2xl font-bold text-foreground">
-                {pendingRequests.filter(r => r.priority === 'urgent').length}
-              </p>
+              <p className="text-base md:text-2xl font-bold text-foreground">{pendingRequests.filter(r => r.priority === 'urgent').length}</p>
               <p className="text-[10px] md:text-sm text-muted-foreground">Urgent</p>
             </div>
           </div>
@@ -186,92 +157,44 @@ export default function Approvals() {
       {/* Approval Cards */}
       <div className="space-y-4">
         {pendingRequests.map((request, index) => (
-          <div 
-            key={request.id}
-            className="bg-card rounded-lg border border-border p-3 md:p-6 animate-slide-up"
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
+          <div key={request.id} className="bg-card rounded-lg border border-border p-3 md:p-6 animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
             <div className="space-y-2 md:space-y-4">
-              {/* Request Info */}
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                    <span className="text-sm md:text-lg font-semibold text-foreground">
-                      {request.request_number}
-                    </span>
+                    <span className="text-sm md:text-lg font-semibold text-foreground">{request.request_number}</span>
                     <StatusBadge status={request.status as any} />
                     {request.priority === 'urgent' && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-medium">
-                        <AlertTriangle className="h-2.5 w-2.5" />
-                        Urgent
+                        <AlertTriangle className="h-2.5 w-2.5" />Urgent
                       </span>
                     )}
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 md:gap-4 text-xs md:text-sm">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Building2 className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
-                    <span className="text-foreground truncate">{request.project_name}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <User className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
-                    <span className="text-foreground truncate">{request.requester_name}</span>
-                  </div>
+                  <div className="flex items-center gap-1.5 min-w-0"><Building2 className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" /><span className="text-foreground truncate">{request.project_name}</span></div>
+                  <div className="flex items-center gap-1.5 min-w-0"><User className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" /><span className="text-foreground truncate">{request.requester_name}</span></div>
                   <div className="flex items-center gap-1.5 col-span-2 md:col-span-1">
                     <Package className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground shrink-0" />
-                    <span className="text-foreground">
-                      {requestItems[request.id]?.length || 0} items
-                    </span>
-                    <span className="text-muted-foreground text-[10px] md:text-xs ml-auto md:ml-0">
-                      {format(new Date(request.created_at), 'MMM d')}
-                    </span>
+                    <span className="text-foreground">{requestItems[request.id]?.length || 0} items</span>
+                    <span className="text-muted-foreground text-[10px] md:text-xs ml-auto md:ml-0">{format(new Date(request.created_at), 'MMM d')}</span>
                   </div>
                 </div>
               </div>
-
-              {/* Actions */}
               <div className="flex items-center gap-2 pt-2 border-t border-border">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleAction(request, 'reject')}
-                  className="flex-1 h-7 md:h-9 text-xs md:text-sm text-destructive border-destructive/30 hover:bg-destructive/10"
-                >
-                  <X className="h-3.5 w-3.5 mr-1" />
-                  Reject
-                </Button>
-                <Button 
-                  variant="success" 
-                  size="sm"
-                  onClick={() => handleAction(request, 'approve')}
-                  className="flex-1 h-7 md:h-9 text-xs md:text-sm"
-                >
-                  <Check className="h-3.5 w-3.5 mr-1" />
-                  Approve
-                </Button>
-                <Link to={`/requests/${request.id}`}>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 md:h-9 md:w-9 shrink-0">
-                    <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                  </Button>
-                </Link>
+                <Button variant="outline" size="sm" onClick={() => handleAction(request, 'reject')} className="flex-1 h-7 md:h-9 text-xs md:text-sm text-destructive border-destructive/30 hover:bg-destructive/10"><X className="h-3.5 w-3.5 mr-1" />Reject</Button>
+                <Button variant="success" size="sm" onClick={() => handleAction(request, 'approve')} className="flex-1 h-7 md:h-9 text-xs md:text-sm"><Check className="h-3.5 w-3.5 mr-1" />Approve</Button>
+                <Link to={`/requests/${request.id}`}><Button variant="ghost" size="icon" className="h-7 w-7 md:h-9 md:w-9 shrink-0"><Eye className="h-3.5 w-3.5 md:h-4 md:w-4" /></Button></Link>
               </div>
             </div>
-
-            {/* Items Preview */}
             {requestItems[request.id] && requestItems[request.id].length > 0 && (
               <div className="mt-4 pt-4 border-t border-border">
                 <div className="flex flex-wrap gap-2">
                   {requestItems[request.id].map((item) => (
-                    <span 
-                      key={item.id}
-                      className="inline-flex items-center px-3 py-1.5 rounded-lg bg-muted text-sm"
-                    >
+                    <span key={item.id} className="inline-flex items-center px-3 py-1.5 rounded-lg bg-muted text-sm">
                       <span className="font-medium">{item.name}</span>
                       <span className="mx-2 text-muted-foreground">·</span>
-                      <span className="text-muted-foreground">
-                        {item.quantity} {item.unit}
-                      </span>
+                      <span className="text-muted-foreground">{item.quantity} {item.unit}</span>
                     </span>
                   ))}
                 </div>
@@ -279,7 +202,6 @@ export default function Approvals() {
             )}
           </div>
         ))}
-
         {pendingRequests.length === 0 && (
           <div className="text-center py-12">
             <Check className="h-12 w-12 mx-auto text-success mb-4" />
@@ -289,33 +211,22 @@ export default function Approvals() {
         )}
       </div>
 
-      {/* Approval/Rejection Dialog */}
       <Dialog open={!!selectedRequest && !!actionType} onOpenChange={() => setSelectedRequest(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {actionType === 'approve' ? 'Approve Request' : 'Reject Request'}
-            </DialogTitle>
+            <DialogTitle>{actionType === 'approve' ? 'Approve Request' : 'Reject Request'}</DialogTitle>
             <DialogDescription>
               {actionType === 'approve' 
                 ? 'Select whether this is a stock request (items available) or purchase request (items need to be purchased).'
-                : 'Please provide a reason for rejection. This will be visible to the requester.'
-              }
+                : 'Please provide a reason for rejection. This will be visible to the requester.'}
             </DialogDescription>
           </DialogHeader>
-
           <div className="py-4 space-y-4">
-            {/* Request Type Selection for approval */}
             {actionType === 'approve' && (
               <div className="space-y-2">
                 <Label htmlFor="requestType">Request Type *</Label>
-                <Select 
-                  value={requestType} 
-                  onValueChange={(v) => setRequestType(v as 'stock_request' | 'purchase_request')}
-                >
-                  <SelectTrigger id="requestType">
-                    <SelectValue placeholder="Select request type" />
-                  </SelectTrigger>
+                <Select value={requestType} onValueChange={(v) => setRequestType(v as 'stock_request' | 'purchase_request')}>
+                  <SelectTrigger id="requestType"><SelectValue placeholder="Select request type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="stock_request">Stock Request (Available in stock)</SelectItem>
                     <SelectItem value="purchase_request">Purchase Request (Need to purchase)</SelectItem>
@@ -323,19 +234,13 @@ export default function Approvals() {
                 </Select>
               </div>
             )}
-            
             <Textarea
               placeholder={actionType === 'approve' ? 'Add a comment (optional)' : 'Reason for rejection (required)'}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={4}
+              value={comment} onChange={(e) => setComment(e.target.value)} rows={4}
             />
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedRequest(null)} disabled={isProcessing}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setSelectedRequest(null)} disabled={isProcessing}>Cancel</Button>
             <Button 
               variant={actionType === 'approve' ? 'success' : 'destructive'}
               onClick={confirmAction}
