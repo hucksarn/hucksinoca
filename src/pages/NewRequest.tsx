@@ -223,14 +223,18 @@ export default function NewRequest() {
 
     setIsSubmitting(true);
 
-    const validItems = items.map((item) => ({
-      category: item.category as string,
-      name: item.name,
-      specification: item.specification || null,
-      quantity: parseFloat(item.quantity),
-      unit: item.unit as string,
-      preferred_brand: item.preferredBrand || null,
-    }));
+    const allowedUnits = ['nos', 'bags', 'kg', 'ton', 'm3'];
+    const validItems = items.map((item) => {
+      const normalizedUnit = item.unit.toLowerCase().trim();
+      return {
+        category: item.category as string,
+        name: item.name,
+        specification: item.specification || null,
+        quantity: parseFloat(item.quantity),
+        unit: allowedUnits.includes(normalizedUnit) ? normalizedUnit : 'nos',
+        preferred_brand: item.preferredBrand || null,
+      };
+    });
 
     try {
       await createRequest.mutateAsync({
