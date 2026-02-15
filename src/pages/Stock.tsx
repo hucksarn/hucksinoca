@@ -193,6 +193,7 @@ export default function Stock() {
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>Unit</TableHead>
               </TableRow>
@@ -200,7 +201,7 @@ export default function Stock() {
             <TableBody>
               {stockItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No stock items yet.
                   </TableCell>
                 </TableRow>
@@ -210,6 +211,7 @@ export default function Stock() {
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{item.item || `Item ${index + 1}`}</TableCell>
                     <TableCell className="font-medium">{item.description}</TableCell>
+                    <TableCell className="text-xs">{item.category || '—'}</TableCell>
                     <TableCell>{item.qty}</TableCell>
                     <TableCell>{item.unit}</TableCell>
                   </TableRow>
