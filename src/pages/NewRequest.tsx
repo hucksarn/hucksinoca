@@ -138,7 +138,9 @@ export default function NewRequest() {
         balances.set(key, { item: si.item, description: si.description, unit: si.unit, qty: si.qty, category: si.category });
       }
     }
-    return Array.from(balances.values()).sort((a, b) => (a.item || a.description).localeCompare(b.item || b.description));
+    return Array.from(balances.values())
+      .filter((entry) => entry.qty > 0)
+      .sort((a, b) => (a.item || a.description).localeCompare(b.item || b.description));
   }, [stockItems]);
 
   const getBalance = (description: string, unit: string) => {

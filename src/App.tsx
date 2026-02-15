@@ -13,6 +13,7 @@ import Approvals from "./pages/Approvals";
 import Settings from "./pages/Settings";
 import Projects from "./pages/Projects";
 import Stock from "./pages/Stock";
+import StockMovement from "./pages/StockMovement";
 import Auth from "./pages/Auth";
 import ChangePassword from "./pages/ChangePassword";
 import NotFound from "./pages/NotFound";
@@ -79,6 +80,7 @@ function AppRoutes() {
       <Route path="/approvals" element={<AdminRoute><Approvals /></AdminRoute>} />
       <Route path="/projects" element={<AdminRoute><Projects /></AdminRoute>} />
       <Route path="/stock" element={<AdminRoute><Stock /></AdminRoute>} />
+      <Route path="/stock-movement" element={<AdminRoute><StockMovement /></AdminRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

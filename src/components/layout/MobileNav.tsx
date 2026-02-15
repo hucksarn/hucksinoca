@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Plus, CheckSquare, Settings, LogOut, Building2, Package } from 'lucide-react';
+import { LayoutDashboard, FileText, Plus, CheckSquare, Settings, LogOut, Building2, Package, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { usePendingRequestsCount } from '@/hooks/useDatabase';
@@ -28,6 +28,7 @@ export function MobileNav() {
     { name: 'Approvals', href: '/approvals', icon: CheckSquare, adminOnly: true, badge: pendingCount },
     { name: 'Projects', href: '/projects', icon: Building2, adminOnly: true },
     { name: 'Stock', href: '/stock', icon: Package, adminOnly: true },
+    { name: 'Movement', href: '/stock-movement', icon: ArrowLeftRight, adminOnly: true },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
