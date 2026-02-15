@@ -52,7 +52,7 @@ export function MobileNav() {
                 to={item.href}
                 className={cn(
                   "flex flex-col items-center justify-center flex-1 h-full py-1 relative",
-                  "text-muted-foreground hover:text-foreground transition-colors",
+                  "text-muted-foreground transition-colors",
                   isActive && "text-primary"
                 )}
               >
@@ -73,7 +73,6 @@ export function MobileNav() {
               </Link>
             );
           })}
-          
           
           <button
             onClick={() => setShowLogoutDialog(true)}
