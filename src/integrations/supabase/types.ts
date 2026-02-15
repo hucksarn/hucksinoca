@@ -259,6 +259,7 @@ export type Database = {
       }
       stock_items: {
         Row: {
+          category: string | null
           created_at: string
           created_by: string | null
           date: string | null
@@ -269,6 +270,7 @@ export type Database = {
           unit: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string
           created_by?: string | null
           date?: string | null
@@ -279,6 +281,7 @@ export type Database = {
           unit?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string
           created_by?: string | null
           date?: string | null
