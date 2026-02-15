@@ -234,7 +234,7 @@ export default function Stock() {
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden">
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Add GRN</DialogTitle>
             <DialogDescription>
@@ -242,18 +242,18 @@ export default function Stock() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-4 max-h-[60vh]">
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => setActiveTab(value as 'manual' | 'excel')}
-              className="space-y-4 overflow-y-auto pr-1"
-            >
-              <TabsList className="w-full">
-                <TabsTrigger value="manual" className="flex-1">Manual Entry</TabsTrigger>
-                <TabsTrigger value="excel" className="flex-1">Upload Excel</TabsTrigger>
-              </TabsList>
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as 'manual' | 'excel')}
+            className="flex flex-col flex-1 overflow-hidden"
+          >
+            <TabsList className="w-full shrink-0">
+              <TabsTrigger value="manual" className="flex-1">Manual Entry</TabsTrigger>
+              <TabsTrigger value="excel" className="flex-1">Upload Excel</TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="manual" className="space-y-4">
+            <div className="flex-1 overflow-y-auto mt-4 pr-1">
+              <TabsContent value="manual" className="space-y-4 mt-0">
                 <div className="border rounded-lg p-3">
                   <Table>
                     <TableHeader>
@@ -325,15 +325,13 @@ export default function Stock() {
                   </Table>
                 </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <Button variant="outline" onClick={handleAddManualRow} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Row
-                  </Button>
-                </div>
+                <Button variant="outline" onClick={handleAddManualRow} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Row
+                </Button>
               </TabsContent>
 
-              <TabsContent value="excel" className="space-y-4">
+              <TabsContent value="excel" className="space-y-4 mt-0">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} />
                   <Button variant="outline" className="gap-2" disabled={uploading}>
@@ -415,25 +413,27 @@ export default function Stock() {
                   <p className="text-sm text-muted-foreground">Upload an Excel file to preview rows.</p>
                 )}
               </TabsContent>
-            </Tabs>
-
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t border-border pt-3 bg-background">
-              {activeTab === 'manual' ? (
-                <Button variant="accent" onClick={handleSaveManual} disabled={uploading || !hasManualRows} className="gap-2">
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  Save to Stock
-                </Button>
-              ) : (
-                <Button
-                  variant="accent"
-                  onClick={() => handleImportRows(uploadRows)}
-                  disabled={uploading || uploadRows.length === 0}
-                >
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Import to Stock
-                </Button>
-              )}
             </div>
+          </Tabs>
+
+          {/* Always-visible save button */}
+          <div className="flex justify-end border-t border-border pt-3 shrink-0">
+            {activeTab === 'manual' ? (
+              <Button variant="accent" onClick={handleSaveManual} disabled={uploading || !hasManualRows} className="gap-2">
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Save to Stock
+              </Button>
+            ) : (
+              <Button
+                variant="accent"
+                onClick={() => handleImportRows(uploadRows)}
+                disabled={uploading || uploadRows.length === 0}
+                className="gap-2"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                Import to Stock
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
