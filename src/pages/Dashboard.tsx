@@ -54,10 +54,10 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
+      {/* Main Content */}
+      <div className="space-y-4 md:space-y-6">
         {/* Requests Table */}
-        <div className="lg:col-span-2 space-y-2 md:space-y-4">
+        <div className="space-y-2 md:space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm md:text-lg font-semibold text-foreground">
               {isAdmin ? 'All Requests' : 'My Requests'}
@@ -69,10 +69,10 @@ export default function Dashboard() {
           <RequestsTable requests={requests.slice(0, 5)} />
         </div>
 
-        {/* Sidebar widgets */}
-        <div className="space-y-3 md:space-y-6">
-          <RecentActivity />
+        {/* Projects & Activity */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
           <ProjectOverview />
+          <RecentActivity />
         </div>
       </div>
     </MainLayout>
