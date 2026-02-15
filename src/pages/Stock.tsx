@@ -1,4 +1,5 @@
 import { MainLayout } from '@/components/layout/MainLayout';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -7,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Plus } from 'lucide-react';
 
 type StockItem = {
   id: string;
@@ -21,6 +23,17 @@ export default function Stock() {
 
   return (
     <MainLayout title="Stock" subtitle="Store items inventory">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base md:text-lg font-semibold text-foreground">Stock Items</h2>
+          <p className="text-xs md:text-sm text-muted-foreground">Record incoming items (GRN) and current stock.</p>
+        </div>
+        <Button variant="accent" size="sm" className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add GRN
+        </Button>
+      </div>
+
       <div className="bg-card rounded-xl border border-border p-3 md:p-6">
         <Table>
           <TableHeader>
