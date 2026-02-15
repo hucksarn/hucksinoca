@@ -234,7 +234,7 @@ export default function Stock() {
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-3xl max-h-[85vh] !flex !flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Add GRN</DialogTitle>
             <DialogDescription>
