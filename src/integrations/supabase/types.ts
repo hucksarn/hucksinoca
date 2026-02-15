@@ -257,6 +257,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string | null
+          description: string
+          id: string
+          item: string | null
+          qty: number
+          unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          description?: string
+          id?: string
+          item?: string | null
+          qty?: number
+          unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string | null
+          description?: string
+          id?: string
+          item?: string | null
+          qty?: number
+          unit?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

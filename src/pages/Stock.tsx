@@ -2,30 +2,22 @@ import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Plus, Upload, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
 
 type StockItem = {
   id: string;
-  date?: string;
-  item?: string;
+  date: string;
+  item: string;
   description: string;
   qty: number;
   unit: string;
@@ -53,15 +45,25 @@ export default function Stock() {
 
   const loadStock = async () => {
     try {
-      const response = await fetch('/api/stock');
-      const data = await response.json();
-          setStockItems(Array.isArray(data.items) ? data.items : []);
+      const { data, error } = await supabase
+        .from('stock_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setStockItems(
+        (data || []).map((row) => ({
+          id: row.id,
+          date: row.date || '',
+          item: row.item || '',
+          description: row.description,
+          qty: Number(row.qty),
+          unit: row.unit || '',
+        }))
+      );
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load stock items',
-        variant: 'destructive',
-      });
+      console.error('[Stock] Failed to load stock:', error);
+      toast({ title: 'Error', description: 'Failed to load stock items', variant: 'destructive' });
     } finally {
       setLoadingStock(false);
     }
@@ -83,9 +85,7 @@ export default function Stock() {
         const description = row.Description || row.description || row.DESC || row.desc || '';
         const qty = row.Qty ?? row.qty ?? row.QTY ?? row.Quantity ?? row.quantity ?? '';
         const unit = row.Unit || row.unit || row.UOM || row.uom || '';
-
         if (!description) return null;
-
         return {
           id: `upload_${Date.now()}_${index}`,
           item: String(item).trim(),
@@ -102,16 +102,12 @@ export default function Stock() {
   const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     setUploading(true);
     try {
       await parseExcel(file);
     } catch (error) {
-      toast({
-        title: 'Upload Failed',
-        description: 'Could not read Excel file.',
-        variant: 'destructive',
-      });
+      console.error('[Stock] Excel parse error:', error);
+      toast({ title: 'Upload Failed', description: 'Could not read Excel file.', variant: 'destructive' });
     } finally {
       setUploading(false);
     }
@@ -119,36 +115,32 @@ export default function Stock() {
 
   const handleImportRows = async (rows: UploadRow[]) => {
     if (rows.length === 0) {
-      toast({
-        title: 'No Data',
-        description: 'Add at least one stock row.',
-        variant: 'destructive',
-      });
+      toast({ title: 'No Data', description: 'Add at least one stock row.', variant: 'destructive' });
       return;
     }
 
     setUploading(true);
     try {
-      const response = await fetch('/api/stock', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: rows }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to import stock');
-      }
-      const data = await response.json();
-      setStockItems(Array.isArray(data.items) ? data.items : []);
+      const today = new Date().toISOString().slice(0, 10);
+      const insertRows = rows.map((r) => ({
+        item: r.item,
+        description: r.description,
+        qty: r.qty,
+        unit: r.unit,
+        date: today,
+      }));
+
+      const { error } = await supabase.from('stock_items').insert(insertRows);
+      if (error) throw error;
+
+      await loadStock();
       setUploadRows([]);
       setManualRows([{ id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '' }]);
-      toast({ title: 'Stock Imported', description: 'Excel rows added to stock.' });
+      toast({ title: 'Stock Imported', description: `${rows.length} rows added to stock.` });
       setShowDialog(false);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to import stock rows.',
-        variant: 'destructive',
-      });
+      console.error('[Stock] Import error:', error);
+      toast({ title: 'Error', description: 'Failed to import stock rows.', variant: 'destructive' });
     } finally {
       setUploading(false);
     }
@@ -167,14 +159,8 @@ export default function Stock() {
 
   const handleSaveManual = () => {
     const cleaned = manualRows
-      .map((row) => ({
-        ...row,
-        item: row.item.trim(),
-        description: row.description.trim(),
-        unit: row.unit.trim(),
-      }))
+      .map((row) => ({ ...row, item: row.item.trim(), description: row.description.trim(), unit: row.unit.trim() }))
       .filter((row) => row.description.length > 0);
-
     void handleImportRows(cleaned);
   };
 
@@ -204,10 +190,9 @@ export default function Stock() {
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>Item</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Unit</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Qty</TableHead>
+                <TableHead>Unit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -221,8 +206,8 @@ export default function Stock() {
                 stockItems.map((item, index) => (
                   <TableRow key={item.id}>
                     <TableCell>{index + 1}</TableCell>
-                  <TableCell>{item.item || `Item ${index + 1}`}</TableCell>
-                  <TableCell className="font-medium">{item.description}</TableCell>
+                    <TableCell>{item.item || `Item ${index + 1}`}</TableCell>
+                    <TableCell className="font-medium">{item.description}</TableCell>
                     <TableCell>{item.qty}</TableCell>
                     <TableCell>{item.unit}</TableCell>
                   </TableRow>
@@ -237,9 +222,7 @@ export default function Stock() {
         <DialogContent className="max-w-3xl max-h-[85vh] !flex !flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Add GRN</DialogTitle>
-            <DialogDescription>
-              Add stock items manually or import via Excel.
-            </DialogDescription>
+            <DialogDescription>Add stock items manually or import via Excel.</DialogDescription>
           </DialogHeader>
 
           <Tabs
@@ -269,52 +252,20 @@ export default function Stock() {
                       {manualRows.map((row, index) => (
                         <TableRow key={row.id}>
                           <TableCell>
-                            <Input
-                              value={row.item}
-                              onChange={(event) => {
-                                const next = [...manualRows];
-                                next[index] = { ...row, item: event.target.value };
-                                setManualRows(next);
-                              }}
-                            />
+                            <Input value={row.item} onChange={(e) => { const next = [...manualRows]; next[index] = { ...row, item: e.target.value }; setManualRows(next); }} />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              value={row.description}
-                              onChange={(event) => {
-                                const next = [...manualRows];
-                                next[index] = { ...row, description: event.target.value };
-                                setManualRows(next);
-                              }}
-                            />
+                            <Input value={row.description} onChange={(e) => { const next = [...manualRows]; next[index] = { ...row, description: e.target.value }; setManualRows(next); }} />
                           </TableCell>
                           <TableCell className="w-28">
-                            <Input
-                              value={row.qty}
-                              onChange={(event) => {
-                                const next = [...manualRows];
-                                next[index] = { ...row, qty: Number(event.target.value) || 0 };
-                                setManualRows(next);
-                              }}
-                            />
+                            <Input value={row.qty} onChange={(e) => { const next = [...manualRows]; next[index] = { ...row, qty: Number(e.target.value) || 0 }; setManualRows(next); }} />
                           </TableCell>
                           <TableCell className="w-32">
-                            <Input
-                              value={row.unit}
-                              onChange={(event) => {
-                                const next = [...manualRows];
-                                next[index] = { ...row, unit: event.target.value };
-                                setManualRows(next);
-                              }}
-                            />
+                            <Input value={row.unit} onChange={(e) => { const next = [...manualRows]; next[index] = { ...row, unit: e.target.value }; setManualRows(next); }} />
                           </TableCell>
                           <TableCell className="w-10 text-right">
                             {manualRows.length > 1 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveManualRow(row.id)}
-                              >
+                              <Button variant="ghost" size="icon" onClick={() => handleRemoveManualRow(row.id)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
@@ -324,7 +275,6 @@ export default function Stock() {
                     </TableBody>
                   </Table>
                 </div>
-
                 <Button variant="outline" onClick={handleAddManualRow} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Add Row
@@ -338,11 +288,7 @@ export default function Stock() {
                     <Upload className="h-4 w-4" />
                     Upload
                   </Button>
-                  <a
-                    href="/stock_sample.csv"
-                    className="text-xs text-primary underline underline-offset-4"
-                    download
-                  >
+                  <a href="/stock_sample.csv" className="text-xs text-primary underline underline-offset-4" download>
                     Download sample CSV
                   </a>
                 </div>
@@ -365,44 +311,16 @@ export default function Stock() {
                         {uploadRows.map((row, index) => (
                           <TableRow key={row.id}>
                             <TableCell>
-                              <Input
-                                value={row.item}
-                                onChange={(event) => {
-                                  const next = [...uploadRows];
-                                  next[index] = { ...row, item: event.target.value };
-                                  setUploadRows(next);
-                                }}
-                              />
+                              <Input value={row.item} onChange={(e) => { const next = [...uploadRows]; next[index] = { ...row, item: e.target.value }; setUploadRows(next); }} />
                             </TableCell>
                             <TableCell>
-                              <Input
-                                value={row.description}
-                                onChange={(event) => {
-                                  const next = [...uploadRows];
-                                  next[index] = { ...row, description: event.target.value };
-                                  setUploadRows(next);
-                                }}
-                              />
+                              <Input value={row.description} onChange={(e) => { const next = [...uploadRows]; next[index] = { ...row, description: e.target.value }; setUploadRows(next); }} />
                             </TableCell>
                             <TableCell className="w-28">
-                              <Input
-                                value={row.qty}
-                                onChange={(event) => {
-                                  const next = [...uploadRows];
-                                  next[index] = { ...row, qty: Number(event.target.value) || 0 };
-                                  setUploadRows(next);
-                                }}
-                              />
+                              <Input value={row.qty} onChange={(e) => { const next = [...uploadRows]; next[index] = { ...row, qty: Number(e.target.value) || 0 }; setUploadRows(next); }} />
                             </TableCell>
                             <TableCell className="w-32">
-                              <Input
-                                value={row.unit}
-                                onChange={(event) => {
-                                  const next = [...uploadRows];
-                                  next[index] = { ...row, unit: event.target.value };
-                                  setUploadRows(next);
-                                }}
-                              />
+                              <Input value={row.unit} onChange={(e) => { const next = [...uploadRows]; next[index] = { ...row, unit: e.target.value }; setUploadRows(next); }} />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -416,7 +334,6 @@ export default function Stock() {
             </div>
           </Tabs>
 
-          {/* Always-visible save button */}
           <div className="flex justify-end border-t border-border pt-3 shrink-0">
             {activeTab === 'manual' ? (
               <Button variant="accent" onClick={handleSaveManual} disabled={uploading || !hasManualRows} className="gap-2">
@@ -424,12 +341,7 @@ export default function Stock() {
                 Save to Stock
               </Button>
             ) : (
-              <Button
-                variant="accent"
-                onClick={() => handleImportRows(uploadRows)}
-                disabled={uploading || uploadRows.length === 0}
-                className="gap-2"
-              >
+              <Button variant="accent" onClick={() => handleImportRows(uploadRows)} disabled={uploading || uploadRows.length === 0} className="gap-2">
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Import to Stock
               </Button>
