@@ -1,0 +1,61 @@
+{
+  "users": [
+    { "email": "hamdhoon@inoca.mv", "full_name": "Mohamed Hamdhoon", "designation": "Procurement Manager", "role": "admin", "password": "admin123" },
+    { "email": "hamdhoon1991@gmail.com", "full_name": "supervisor", "designation": "Site Supervisor", "role": "user", "password": "admin123" },
+    { "email": "user@test.com", "full_name": "user", "designation": "Foreman", "role": "user", "password": "admin123" },
+    { "email": "joseph@inoca.mv", "full_name": "Joseph", "designation": "Project Manager", "role": "admin", "password": "admin123" },
+    { "email": "hucksarn@gmail.com", "full_name": "hucksarn", "designation": "Foreman", "role": "user", "password": "admin123" },
+    { "email": "admin@system.local", "full_name": "System Admin", "designation": "System Admin", "role": "admin", "password": "admin123" }
+  ],
+  "projects": [
+    { "name": "Umar House-Lot 10214", "location": "Hulhumale" },
+    { "name": "Fine Tune-Lot 21613", "location": "Hulhumale" },
+    { "name": "Shamin House-Lot 20067", "location": "Hulhumale" },
+    { "name": "Traffic Park-Lot 11745", "location": "Hulhumale" },
+    { "name": "Traffic Park-Lot 11744", "location": "Hulhumale" },
+    { "name": "H.Handhaan", "location": "Male" },
+    { "name": "M.Bohdhage", "location": "Male" },
+    { "name": "Mookai Suite", "location": "Male" },
+    { "name": "Vakkaru Maldives", "location": "B.Vakkaru" },
+    { "name": "Coral Place-Lot 11622", "location": "Hulhumale" },
+    { "name": "Thilafushi Godown-Lot 30254", "location": "K.Thilafushi" },
+    { "name": "H.Dhoshimeynaage", "location": "Male" },
+    { "name": "Hussain House-Lot 10096", "location": "Hulhumale" },
+    { "name": "Naid Cafe-Lot 21612", "location": "Hulhumale" }
+  ],
+  "categories": [
+    "Ground work - Projects",
+    "Material - Concrete",
+    "Materials - Additional works",
+    "Material - Finishes & Decoration",
+    "Materials - Doors and Windows",
+    "Materials- Masonry & Plastering",
+    "Materials- Painting Works",
+    "Materials - Electrical works",
+    "Materials - Hydraulics & Drainage",
+    "Materials - Metal works",
+    "Materials - Roofing works",
+    "Other Construction Costs"
+  ],
+  "stock_items": [
+    { "date": "2026-02-15", "item": "Binding wire", "description": "Per roll is 9.2kg", "qty": 200, "unit": "Roll" },
+    { "date": "2026-02-15", "item": "Wire nail 3 inch", "description": "7.6cm, 11.2kg, 10 box = 100kg", "qty": 90, "unit": "kg" },
+    { "date": "2026-02-15", "item": "Wire nail 2 inch", "description": "5cm, 11.2kg per box", "qty": 90, "unit": "kg" },
+    { "date": "2026-02-15", "item": "Wire nail 1.5 inch", "description": "3.8cm, 11.2kg per box", "qty": 90, "unit": "kg" },
+    { "date": "2026-02-15", "item": "Patta Wood Screw 3 Inch", "description": "7.6cm, 25kg/box", "qty": 6, "unit": "Box" },
+    { "date": "2026-02-15", "item": "Patta Wood Screw 4 Inch", "description": "10cm, 25kg/box", "qty": 6, "unit": "Box" },
+    { "date": "2026-02-15", "item": "Dry wall black screw 1 inch", "description": "2.54cm, 25kg/box", "qty": 6, "unit": "Box" },
+    { "date": "2026-02-15", "item": "Dry wall black screw 1.5 inch", "description": "3.8cm, 25kg/box", "qty": 6, "unit": "Box" },
+    { "date": "2026-02-15", "item": "Dry wall black screw 2 inch", "description": "5cm, 25kg/box", "qty": 6, "unit": "Box" },
+    { "date": "2026-02-15", "item": "Dry wall black screw 2.5 inch", "description": "6.4cm, 25kg/box", "qty": 6, "unit": "Box" },
+    { "date": "2026-02-15", "item": "Dry wall black screw 3 inch", "description": "7.6cm, 25kg/box", "qty": 6, "unit": "Box" },
+    { "date": "2026-02-15", "item": "Sprit Level 1 Foot", "description": "1 Foot", "qty": 5, "unit": "Nos" },
+    { "date": "2026-02-15", "item": "Sprit Level 2 Foot", "description": "2 Foot", "qty": 5, "unit": "Nos" },
+    { "date": "2026-02-15", "item": "Concrete Chisels", "description": "Standard size", "qty": 10, "unit": "Nos" },
+    { "date": "2026-02-15", "item": "Patta Hand Reveter Gun", "description": "Standard size", "qty": 10, "unit": "Nos" },
+    { "date": "2026-02-15", "item": "Steel Strap Cutter", "description": "Standard size", "qty": 15, "unit": "Nos" },
+    { "date": "2026-02-15", "item": "Fishing Line 2 mm", "description": "2.0mm (35/140)", "qty": 50, "unit": "Nos" },
+    { "date": "2026-02-15", "item": "Irwin Brand Hand Saw 18\"", "description": "18 Inch", "qty": 15, "unit": "Nos" },
+    { "date": "2026-02-15", "item": "Irwin Brand Hand Saw 20\"", "description": "20 Inch", "qty": 15, "unit": "Nos" }
+  ]
+}
