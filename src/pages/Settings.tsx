@@ -51,13 +51,22 @@ import {
   Loader2,
   Trash2,
   Pencil,
-  Tag
+  Tag,
+  Package
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 import { useMaterialCategories, useCreateMaterialCategory, useDeleteMaterialCategory, MaterialCategory, useUsers, useInvalidateUsers, UserWithProfile } from '@/hooks/useDatabase';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const emailSchema = z.string().email('Please enter a valid email');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -124,6 +133,14 @@ export default function Settings() {
     'Site Supervisor',
     'Foreman',
   ];
+
+  const stockItems: Array<{
+    id: string;
+    date: string;
+    description: string;
+    qty: number;
+    unit: string;
+  }> = [];
 
   const handleAddUser = async () => {
     try {
@@ -376,6 +393,13 @@ export default function Settings() {
             </TabsTrigger>
           )}
           {isAdmin && (
+            <TabsTrigger value="stock" className="gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3 py-1.5">
+              <Package className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Stock</span>
+              <span className="sm:hidden">Stock</span>
+            </TabsTrigger>
+          )}
+          {isAdmin && (
             <TabsTrigger value="organization" className="gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3 py-1.5">
               <Building2 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Organization</span>
@@ -543,6 +567,47 @@ export default function Settings() {
                   ))}
                 </div>
               )}
+            </div>
+          </TabsContent>
+        )}
+
+        {/* Stock Tab (Admin Only) */}
+        {isAdmin && (
+          <TabsContent value="stock" className="space-y-4 md:space-y-6">
+            <div className="bg-card rounded-xl border border-border p-3 md:p-6">
+              <div className="mb-4 md:mb-6">
+                <h3 className="text-base md:text-lg font-semibold text-foreground">Store Stock</h3>
+                <p className="text-xs md:text-sm text-muted-foreground">Track current inventory of store items</p>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Qty</TableHead>
+                    <TableHead>Unit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stockItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                        No stock items yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    stockItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.date}</TableCell>
+                        <TableCell className="font-medium">{item.description}</TableCell>
+                        <TableCell>{item.qty}</TableCell>
+                        <TableCell>{item.unit}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </TabsContent>
         )}
