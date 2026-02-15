@@ -194,6 +194,7 @@ export default function Stock() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">#</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>Unit</TableHead>
@@ -202,13 +203,14 @@ export default function Stock() {
             <TableBody>
               {stockItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
                     No stock items yet.
                   </TableCell>
                 </TableRow>
               ) : (
-                stockItems.map((item) => (
+                stockItems.map((item, index) => (
                   <TableRow key={item.id}>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{item.description}</TableCell>
                     <TableCell>{item.qty}</TableCell>
                     <TableCell>{item.unit}</TableCell>
