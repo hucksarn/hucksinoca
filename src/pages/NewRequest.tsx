@@ -407,8 +407,8 @@ export default function NewRequest() {
                             <span className="text-muted-foreground ml-1 text-xs">({entry.description})</span>
                           )}
                         </div>
-                        <span className="text-xs text-muted-foreground ml-2 shrink-0">
-                          {entry.qty} {entry.unit}
+                        <span className="text-xs font-medium text-success ml-2 shrink-0">
+                          Avail: {entry.qty} {entry.unit}
                         </span>
                       </button>
                     ))}
