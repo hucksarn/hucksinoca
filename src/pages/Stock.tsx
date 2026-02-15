@@ -31,6 +31,19 @@ type UploadRow = {
   unit: string;
 };
 
+async function stockApi(method: 'GET' | 'POST', body?: any) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  const res = await supabase.functions.invoke('stock-api', {
+    method,
+    body: method === 'POST' ? body : undefined,
+  });
+
+  if (res.error) throw new Error(res.error.message || 'Stock API error');
+  return res.data;
+}
+
 export default function Stock() {
   const { toast } = useToast();
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
@@ -45,33 +58,17 @@ export default function Stock() {
 
   const loadStock = async () => {
     try {
-      const { data, error } = await supabase
-        .from('stock_items')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setStockItems(
-        (data || []).map((row) => ({
-          id: row.id,
-          date: row.date || '',
-          item: row.item || '',
-          description: row.description,
-          qty: Number(row.qty),
-          unit: row.unit || '',
-        }))
-      );
+      const data = await stockApi('GET');
+      setStockItems(Array.isArray(data.items) ? data.items : []);
     } catch (error) {
-      console.error('[Stock] Failed to load stock:', error);
+      console.error('[Stock] Load error:', error);
       toast({ title: 'Error', description: 'Failed to load stock items', variant: 'destructive' });
     } finally {
       setLoadingStock(false);
     }
   };
 
-  useEffect(() => {
-    void loadStock();
-  }, []);
+  useEffect(() => { void loadStock(); }, []);
 
   const parseExcel = async (file: File) => {
     const buffer = await file.arrayBuffer();
@@ -118,22 +115,10 @@ export default function Stock() {
       toast({ title: 'No Data', description: 'Add at least one stock row.', variant: 'destructive' });
       return;
     }
-
     setUploading(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const insertRows = rows.map((r) => ({
-        item: r.item,
-        description: r.description,
-        qty: r.qty,
-        unit: r.unit,
-        date: today,
-      }));
-
-      const { error } = await supabase.from('stock_items').insert(insertRows);
-      if (error) throw error;
-
-      await loadStock();
+      const data = await stockApi('POST', { items: rows });
+      setStockItems(Array.isArray(data.items) ? data.items : []);
       setUploadRows([]);
       setManualRows([{ id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '' }]);
       toast({ title: 'Stock Imported', description: `${rows.length} rows added to stock.` });
