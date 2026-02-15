@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { isLocalMode } from '@/lib/api';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,8 +90,16 @@ export default function NewRequest() {
     const loadStock = async () => {
       setLoadingStock(true);
       try {
-        const response = await fetch('/api/stock');
-        const data = await response.json();
+        let data: any;
+        if (isLocalMode) {
+          const items = await (await import('@/lib/api')).stockApi.list();
+          data = { items };
+        } else {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const res = await supabase.functions.invoke('stock-api', { method: 'GET' });
+          if (res.error) throw new Error(res.error.message);
+          data = res.data;
+        }
         if (Array.isArray(data.items)) {
           setStockItems(
             data.items.map((item: any) => ({

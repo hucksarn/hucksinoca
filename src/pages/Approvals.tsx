@@ -78,15 +78,12 @@ export default function Approvals() {
             if (isLocalMode) {
               await stockApiLocal.deduct(itemsToDeduct);
             } else {
-              const response = await fetch('/api/stock/deduct', {
+              const { supabase } = await import('@/integrations/supabase/client');
+              const res = await supabase.functions.invoke('stock-api', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ items: itemsToDeduct }),
+                body: { items: itemsToDeduct, action: 'deduct' },
               });
-              if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                throw new Error(data.error || 'Failed to deduct stock');
-              }
+              if (res.error) throw new Error(res.error.message || 'Failed to deduct stock');
             }
           }
         }
