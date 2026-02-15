@@ -19,7 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Upload, Save, Send, Loader2 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Plus, Trash2, Upload, Save, Send, Loader2, Search } from 'lucide-react';
 import { useProjects, useCreateMaterialRequest, useCreateProject, useMaterialCategories } from '@/hooks/useDatabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -55,7 +63,7 @@ export default function NewRequest() {
   const createProject = useCreateProject();
   const [stockItems, setStockItems] = useState<Array<{ description: string; qty: number; unit: string }>>([]);
   const [loadingStock, setLoadingStock] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     projectId: '',
     priority: 'normal' as 'urgent' | 'normal',
@@ -63,9 +71,14 @@ export default function NewRequest() {
     remarks: '',
   });
 
-  const [items, setItems] = useState<FormItem[]>([
-    { id: '1', category: '', name: '', specification: '', quantity: '', unit: '', preferredBrand: '' }
-  ]);
+  // Added items list
+  const [items, setItems] = useState<FormItem[]>([]);
+
+  // Current item being built (search + select flow)
+  const [currentItem, setCurrentItem] = useState<FormItem>({
+    id: '', category: '', name: '', specification: '', quantity: '', unit: '', preferredBrand: '',
+  });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
@@ -123,6 +136,35 @@ export default function NewRequest() {
     return match?.qty ?? 0;
   };
 
+  const filteredStock = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return stockBalances
+      .filter((entry) => entry.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      .slice(0, 8);
+  }, [searchQuery, stockBalances]);
+
+  const handleSelectStockItem = (entry: { description: string; unit: string; qty: number }) => {
+    setCurrentItem((prev) => ({
+      ...prev,
+      name: entry.description,
+      unit: entry.unit as Unit | '',
+    }));
+    setSearchQuery(entry.description);
+  };
+
+  const canAddItem = currentItem.category && currentItem.name && currentItem.quantity && currentItem.unit;
+
+  const handleAddItem = () => {
+    if (!canAddItem) return;
+    setItems((prev) => [...prev, { ...currentItem, id: Date.now().toString() }]);
+    setCurrentItem({ id: '', category: '', name: '', specification: '', quantity: '', unit: '', preferredBrand: '' });
+    setSearchQuery('');
+  };
+
+  const removeItem = (id: string) => {
+    setItems(items.filter((item) => item.id !== id));
+  };
+
   const handleAddProject = async () => {
     if (!newProject.name.trim() || !newProject.location.trim()) {
       toast({ title: 'Error', description: 'Project name and location are required', variant: 'destructive' });
@@ -135,7 +177,7 @@ export default function NewRequest() {
         name: newProject.name,
         location: newProject.location,
       });
-      
+
       setFormData({ ...formData, projectId: project.id });
       setShowAddProject(false);
       setNewProject({ name: '', location: '' });
@@ -147,34 +189,14 @@ export default function NewRequest() {
     }
   };
 
-  const addItem = () => {
-    setItems([
-      ...items,
-      { id: Date.now().toString(), category: '', name: '', specification: '', quantity: '', unit: '', preferredBrand: '' }
-    ]);
-  };
-
-  const removeItem = (id: string) => {
-    if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id));
-    }
-  };
-
-  const updateItem = (id: string, field: keyof FormItem, value: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    ));
-  };
-
   const validateForm = () => {
     if (!formData.projectId) {
       toast({ title: 'Error', description: 'Please select a project', variant: 'destructive' });
       return false;
     }
 
-    const validItems = items.filter(item => item.category && item.name && item.quantity && item.unit);
-    if (validItems.length === 0) {
-      toast({ title: 'Error', description: 'Please add at least one complete material item', variant: 'destructive' });
+    if (items.length === 0) {
+      toast({ title: 'Error', description: 'Please add at least one material item', variant: 'destructive' });
       return false;
     }
 
@@ -186,16 +208,14 @@ export default function NewRequest() {
 
     setIsSubmitting(true);
 
-    const validItems = items
-      .filter(item => item.category && item.name && item.quantity && item.unit)
-      .map(item => ({
-        category: item.category as string,
-        name: item.name,
-        specification: item.specification || null,
-        quantity: parseFloat(item.quantity),
-        unit: item.unit as string,
-        preferred_brand: item.preferredBrand || null,
-      }));
+    const validItems = items.map((item) => ({
+      category: item.category as string,
+      name: item.name,
+      specification: item.specification || null,
+      quantity: parseFloat(item.quantity),
+      unit: item.unit as string,
+      preferred_brand: item.preferredBrand || null,
+    }));
 
     try {
       await createRequest.mutateAsync({
@@ -208,10 +228,10 @@ export default function NewRequest() {
       });
 
       toast({
-        title: asDraft ? "Draft saved" : "Request submitted",
-        description: asDraft 
-          ? "Your request has been saved as a draft." 
-          : "Your request has been submitted for approval.",
+        title: asDraft ? 'Draft saved' : 'Request submitted',
+        description: asDraft
+          ? 'Your request has been saved as a draft.'
+          : 'Your request has been submitted for approval.',
       });
       navigate('/requests');
     } catch (error: any) {
@@ -236,20 +256,20 @@ export default function NewRequest() {
   }
 
   return (
-    <MainLayout 
-      title="New Material Request" 
+    <MainLayout
+      title="New Material Request"
       subtitle="Create a new material request for your project"
     >
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Section A: Request Details */}
+      <div className="max-w-4xl mx-auto space-y-4">
+        {/* Section A & B combined: Request & Requester Info */}
         <div className="form-section animate-slide-up">
-          <h2 className="form-section-title">Section A – Request Details</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="project">Project / Site *</Label>
-              <Select 
-                value={formData.projectId} 
+          <h2 className="form-section-title">Request Information</h2>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="col-span-2 space-y-1">
+              <Label htmlFor="project" className="text-xs">Project / Site *</Label>
+              <Select
+                value={formData.projectId}
                 onValueChange={(v) => {
                   if (v === '__add_new__') {
                     setShowAddProject(true);
@@ -258,11 +278,11 @@ export default function NewRequest() {
                   }
                 }}
               >
-                <SelectTrigger id="project">
+                <SelectTrigger id="project" className="h-9">
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.filter(p => p.status === 'active').map(project => (
+                  {projects.filter((p) => p.status === 'active').map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
                     </SelectItem>
@@ -279,13 +299,13 @@ export default function NewRequest() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="priority">Priority *</Label>
-              <Select 
-                value={formData.priority} 
+            <div className="space-y-1">
+              <Label htmlFor="priority" className="text-xs">Priority *</Label>
+              <Select
+                value={formData.priority}
                 onValueChange={(v) => setFormData({ ...formData, priority: v as any })}
               >
-                <SelectTrigger id="priority">
+                <SelectTrigger id="priority" className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -295,226 +315,244 @@ export default function NewRequest() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="requiredDate">Required Date</Label>
+            <div className="space-y-1">
+              <Label htmlFor="requiredDate" className="text-xs">Required Date</Label>
               <Input
                 id="requiredDate"
                 type="date"
+                className="h-9"
                 value={formData.requiredDate}
                 onChange={(e) => setFormData({ ...formData, requiredDate: e.target.value })}
               />
             </div>
 
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="remarks">Remarks / Reason</Label>
-              <Textarea
+            <div className="space-y-1">
+              <Label className="text-xs">Requester</Label>
+              <Input value={profile?.full_name || ''} disabled className="bg-muted h-9 text-sm" />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Designation</Label>
+              <Input value={profile?.designation || ''} disabled className="bg-muted h-9 text-sm" />
+            </div>
+
+            <div className="col-span-2 space-y-1">
+              <Label htmlFor="remarks" className="text-xs">Remarks</Label>
+              <Input
                 id="remarks"
-                placeholder="Provide details about this request..."
+                placeholder="Reason or notes..."
+                className="h-9"
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                rows={3}
               />
             </div>
           </div>
         </div>
 
-        {/* Section B: Requester Details */}
+        {/* Section C: Add Materials */}
         <div className="form-section animate-slide-up" style={{ animationDelay: '100ms' }}>
-          <h2 className="form-section-title">Section B – Requester Details</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={profile?.full_name || ''} disabled className="bg-muted" />
-            </div>
-            <div className="space-y-2">
-              <Label>Designation</Label>
-              <Input value={profile?.designation || ''} disabled className="bg-muted" />
-            </div>
-            <div className="space-y-2">
-              <Label>Contact Number</Label>
-              <Input value={profile?.phone || 'Not set'} disabled className="bg-muted" />
-            </div>
-          </div>
-        </div>
+          <h2 className="form-section-title">Add Materials</h2>
 
-        {/* Section C: Material Details */}
-        <div className="form-section animate-slide-up" style={{ animationDelay: '200ms' }}>
-          <h2 className="form-section-title">Section C – Material Details</h2>
-          
-          <div className="space-y-4">
-            {items.map((item, index) => (
-              <div 
-                key={item.id} 
-                className="p-4 rounded-lg bg-muted/50 border border-border space-y-4"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm text-muted-foreground">
-                    Item #{index + 1}
-                  </span>
-                  {items.length > 1 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => removeItem(item.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+          {/* Search & Add Item Flow */}
+          <div className="space-y-3">
+            {/* Row 1: Search + Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1 relative">
+                <Label className="text-xs">Search Material *</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Type to search stock items..."
+                    className="h-9 pl-9"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentItem((prev) => ({ ...prev, name: e.target.value }));
+                    }}
+                  />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Category *</Label>
-                    <Select 
-                      value={item.category} 
-                      onValueChange={(v) => updateItem(item.id, 'category', v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.slug} value={cat.slug}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {searchQuery.trim() && filteredStock.length > 0 && (
+                  <div className="absolute z-10 top-full left-0 right-0 mt-1 rounded-lg border border-border bg-popover shadow-md max-h-48 overflow-y-auto">
+                    {filteredStock.map((entry) => (
+                      <button
+                        type="button"
+                        key={`${entry.description}_${entry.unit}`}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex justify-between items-center"
+                        onClick={() => handleSelectStockItem(entry)}
+                      >
+                        <span className="truncate">{entry.description}</span>
+                        <span className="text-xs text-muted-foreground ml-2 shrink-0">
+                          {entry.qty} {entry.unit}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-
-                  <div className="space-y-2">
-                    <Label>Material Name *</Label>
-                    <Input
-                      placeholder="e.g., Portland Cement"
-                      value={item.name}
-                      onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                    />
-                    {item.name.trim().length > 0 && (
-                      <div className="rounded-lg border border-border bg-background p-2 text-xs">
-                        <div className="text-muted-foreground mb-1">
-                          Available stock
-                          {loadingStock ? ' (loading...)' : ''}:
-                        </div>
-                        <div className="space-y-1">
-                          {stockBalances
-                            .filter((entry) =>
-                              entry.description.toLowerCase().includes(item.name.toLowerCase()),
-                            )
-                            .slice(0, 5)
-                            .map((entry) => (
-                              <button
-                                type="button"
-                                key={`${entry.description}_${entry.unit}`}
-                                className="w-full text-left hover:text-primary"
-                                onClick={() => {
-                                  updateItem(item.id, 'name', entry.description);
-                                  updateItem(item.id, 'unit', entry.unit);
-                                }}
-                              >
-                                {entry.description} — {entry.qty} {entry.unit}
-                              </button>
-                            ))}
-                          {!loadingStock &&
-                            stockBalances.filter((entry) =>
-                              entry.description.toLowerCase().includes(item.name.toLowerCase()),
-                            ).length === 0 && (
-                              <div className="text-muted-foreground">No matching stock items.</div>
-                            )}
-                        </div>
-                      </div>
-                    )}
-                    {item.name && item.unit && (
-                      <div className="text-xs text-muted-foreground">
-                        Balance: {getBalance(item.name, item.unit)} {item.unit}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Specification</Label>
-                    <Input
-                      placeholder="Grade, size, standard..."
-                      value={item.specification}
-                      onChange={(e) => updateItem(item.id, 'specification', e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Quantity *</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="0"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Unit *</Label>
-                    <Select 
-                      value={item.unit} 
-                      onValueChange={(v) => updateItem(item.id, 'unit', v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {units.map(unit => (
-                          <SelectItem key={unit.value} value={unit.value}>
-                            {unit.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Preferred Brand</Label>
-                    <Input
-                      placeholder="Optional"
-                      value={item.preferredBrand}
-                      onChange={(e) => updateItem(item.id, 'preferredBrand', e.target.value)}
-                    />
-                  </div>
-                </div>
+                )}
+                {searchQuery.trim() && filteredStock.length === 0 && !loadingStock && (
+                  <p className="text-xs text-muted-foreground mt-1">No matching stock. You can still type a custom name.</p>
+                )}
               </div>
-            ))}
 
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={addItem}
-              className="w-full border-dashed"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Another Item
-            </Button>
+              <div className="space-y-1">
+                <Label className="text-xs">Category *</Label>
+                <Select
+                  value={currentItem.category}
+                  onValueChange={(v) => setCurrentItem((prev) => ({ ...prev, category: v }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.slug} value={cat.slug}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Row 2: Qty, Unit, Spec, Brand + Add button */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+              <div className="space-y-1">
+                <Label className="text-xs">Qty *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="0"
+                  className="h-9"
+                  value={currentItem.quantity}
+                  onChange={(e) => setCurrentItem((prev) => ({ ...prev, quantity: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Unit *</Label>
+                <Select
+                  value={currentItem.unit}
+                  onValueChange={(v) => setCurrentItem((prev) => ({ ...prev, unit: v as Unit }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((unit) => (
+                      <SelectItem key={unit.value} value={unit.value}>
+                        {unit.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Specification</Label>
+                <Input
+                  placeholder="Grade, size..."
+                  className="h-9"
+                  value={currentItem.specification}
+                  onChange={(e) => setCurrentItem((prev) => ({ ...prev, specification: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Brand</Label>
+                <Input
+                  placeholder="Optional"
+                  className="h-9"
+                  value={currentItem.preferredBrand}
+                  onChange={(e) => setCurrentItem((prev) => ({ ...prev, preferredBrand: e.target.value }))}
+                />
+              </div>
+
+              {canAddItem && (
+                <Button
+                  type="button"
+                  variant="accent"
+                  className="h-9"
+                  onClick={handleAddItem}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Item
+                </Button>
+              )}
+            </div>
+
+            {currentItem.name && currentItem.unit && (
+              <p className="text-xs text-muted-foreground">
+                Stock balance: {getBalance(currentItem.name, currentItem.unit)} {currentItem.unit}
+              </p>
+            )}
           </div>
+
+          {/* Added Items Table */}
+          {items.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                Added Items ({items.length})
+              </h3>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">#</TableHead>
+                      <TableHead className="text-xs">Material</TableHead>
+                      <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs">Qty</TableHead>
+                      <TableHead className="text-xs">Unit</TableHead>
+                      <TableHead className="text-xs">Spec</TableHead>
+                      <TableHead className="text-xs w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item, index) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="text-xs py-2">{index + 1}</TableCell>
+                        <TableCell className="text-xs py-2 font-medium">{item.name}</TableCell>
+                        <TableCell className="text-xs py-2">{item.category}</TableCell>
+                        <TableCell className="text-xs py-2">{item.quantity}</TableCell>
+                        <TableCell className="text-xs py-2">{item.unit}</TableCell>
+                        <TableCell className="text-xs py-2 text-muted-foreground">{item.specification || '—'}</TableCell>
+                        <TableCell className="py-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            onClick={() => removeItem(item.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Section D: Attachments */}
-        <div className="form-section animate-slide-up" style={{ animationDelay: '300ms' }}>
-          <h2 className="form-section-title">Section D – Attachments</h2>
-          
-          <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-            <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground mb-2">
+        <div className="form-section animate-slide-up" style={{ animationDelay: '200ms' }}>
+          <h2 className="form-section-title">Attachments</h2>
+
+          <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+            <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground mb-1">
               Drag and drop files here, or click to browse
             </p>
             <p className="text-xs text-muted-foreground">
               Site photos, drawings, BOQ extracts (Max 10MB each)
             </p>
-            <Button variant="outline" className="mt-4">
+            <Button variant="outline" size="sm" className="mt-3">
               Choose Files
             </Button>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4">
+        <div className="flex flex-col sm:flex-row gap-3 justify-end pt-2 pb-4">
           <Button variant="outline" onClick={() => navigate('/requests')} disabled={isSubmitting}>
             Cancel
           </Button>
