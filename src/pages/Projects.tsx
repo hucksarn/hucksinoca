@@ -3,19 +3,22 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Plus, Trash2, Loader2, CheckCircle, RotateCcw, ChevronDown, MapPin } from 'lucide-react';
 import { useProjects, useCreateProject } from '@/hooks/useDatabase';
-import { isLocalMode, projectsApi } from '@/lib/api';
+import { isLocalMode, projectsApi, getAuthToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Projects() {
   const [showAddProject, setShowAddProject] = useState(false);
@@ -26,11 +29,16 @@ export default function Projects() {
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [approvedOpen, setApprovedOpen] = useState(false);
+  const [approvedLoading, setApprovedLoading] = useState(false);
+  const [approvedItems, setApprovedItems] = useState<any[]>([]);
+  const [approvedProjectName, setApprovedProjectName] = useState('');
 
   const { data: projects = [], isLoading } = useProjects();
   const createProject = useCreateProject();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
 
   const activeProjects = projects.filter(p => p.status === 'active');
   const completedProjects = projects.filter(p => p.status === 'completed');
@@ -95,6 +103,44 @@ export default function Projects() {
     }
   };
 
+  const handleOpenApproved = async (projectId: string, projectName: string) => {
+    if (!isAdmin) return;
+    setApprovedProjectName(projectName);
+    setApprovedOpen(true);
+    setApprovedLoading(true);
+    try {
+      if (isLocalMode) {
+        const token = getAuthToken();
+        const res = await fetch(`/api/projects/${projectId}/approved-items`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (!res.ok) throw new Error('Failed to load approved items');
+        const data = await res.json();
+        setApprovedItems(Array.isArray(data.items) ? data.items : []);
+      } else {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data, error } = await supabase
+          .from('material_requests')
+          .select('id, request_number, created_at, material_request_items(*)')
+          .eq('project_id', projectId)
+          .eq('status', 'approved');
+        if (error) throw error;
+        const items = (data || []).flatMap((r: any) =>
+          (r.material_request_items || []).map((it: any) => ({
+            ...it,
+            request_number: r.request_number,
+            created_at: r.created_at,
+          })),
+        );
+        setApprovedItems(items);
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to load approved items', variant: 'destructive' });
+    } finally {
+      setApprovedLoading(false);
+    }
+  };
+
   return (
     <MainLayout title="Projects" subtitle="Manage your construction projects">
       <div className="space-y-4">
@@ -134,7 +180,14 @@ export default function Projects() {
                     <Card key={project.id} className="group">
                       <CardContent className="p-4 flex items-center justify-between">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{project.name}</p>
+                          <button
+                            type="button"
+                            className={cn("font-medium truncate text-left", isAdmin && "text-primary hover:underline")}
+                            onClick={() => handleOpenApproved(project.id, project.name)}
+                            disabled={!isAdmin}
+                          >
+                            {project.name}
+                          </button>
                           <p className="text-xs text-muted-foreground truncate flex items-center gap-1"><MapPin className="h-3 w-3" />{project.location}</p>
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -164,9 +217,16 @@ export default function Projects() {
                       <Card key={project.id} className="group opacity-60">
                         <CardContent className="p-4 flex items-center justify-between">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate line-through text-muted-foreground">{project.name}</p>
-                            <p className="text-xs text-muted-foreground/60 truncate flex items-center gap-1"><MapPin className="h-3 w-3" />{project.location}</p>
-                          </div>
+                          <button
+                            type="button"
+                            className={cn("font-medium truncate text-left line-through text-muted-foreground", isAdmin && "hover:underline")}
+                            onClick={() => handleOpenApproved(project.id, project.name)}
+                            disabled={!isAdmin}
+                          >
+                            {project.name}
+                          </button>
+                          <p className="text-xs text-muted-foreground/60 truncate flex items-center gap-1"><MapPin className="h-3 w-3" />{project.location}</p>
+                        </div>
                           <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 text-primary hover:text-primary hover:bg-primary/10" onClick={() => handleToggleProjectStatus(project.id, project.status)} disabled={updatingProjectId === project.id} title="Reactivate project">
                             {updatingProjectId === project.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
                           </Button>
@@ -193,6 +253,55 @@ export default function Projects() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={approvedOpen} onOpenChange={setApprovedOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Approved Items</DialogTitle>
+            <DialogDescription>{approvedProjectName}</DialogDescription>
+          </DialogHeader>
+          {approvedLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Request</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Qty</TableHead>
+                    <TableHead>Unit</TableHead>
+                    <TableHead>Category</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {approvedItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        No approved items for this project.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    approvedItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="text-xs">{item.request_number || '-'}</TableCell>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{item.specification || '-'}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.unit}</TableCell>
+                        <TableCell className="text-xs">{item.category || '-'}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

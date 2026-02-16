@@ -153,6 +153,28 @@ app.delete('/api/projects/:id', authMiddleware, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
+// Approved items by project (admin)
+app.get('/api/projects/:id/approved-items', authMiddleware, adminOnly, (req, res) => {
+  const projectId = req.params.id;
+  const rows = db.prepare(`
+    SELECT
+      mri.id,
+      mri.category,
+      mri.name,
+      mri.specification,
+      mri.quantity,
+      mri.unit,
+      mri.preferred_brand,
+      mr.request_number,
+      mr.created_at
+    FROM material_request_items mri
+    JOIN material_requests mr ON mri.request_id = mr.id
+    WHERE mr.project_id = ? AND mr.status = 'approved'
+    ORDER BY mr.created_at DESC
+  `).all(projectId);
+  res.json({ items: rows });
+});
+
 // ──────────────── MATERIAL CATEGORIES ────────────────
 
 app.get('/api/categories', authMiddleware, (_req, res) => {
