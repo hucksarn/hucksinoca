@@ -78,6 +78,7 @@ export default function StockMovement() {
   const [editItem, setEditItem] = useState<StockItem | null>(null);
   const [editForm, setEditForm] = useState({ item: '', description: '', qty: 0, unit: '', category: '' });
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [requestDetails, setRequestDetails] = useState<Record<string, { request_number: string; requester_name: string; project_name: string; remarks: string | null; request_type: string }>>({});
@@ -233,21 +234,27 @@ export default function StockMovement() {
     setSaving(true);
     try {
       if (isLocalMode) {
-        toast({ title: 'Not supported', description: 'Edit is not supported in local mode.', variant: 'destructive' });
-        return;
-      }
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { error } = await supabase
-        .from('stock_items')
-        .update({
+        await stockApiLocal.update(editItem.id, {
           item: editForm.item,
           description: editForm.description,
           qty: editForm.qty,
           unit: editForm.unit,
           category: editForm.category,
-        })
-        .eq('id', editItem.id);
-      if (error) throw error;
+        });
+      } else {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { error } = await supabase
+          .from('stock_items')
+          .update({
+            item: editForm.item,
+            description: editForm.description,
+            qty: editForm.qty,
+            unit: editForm.unit,
+            category: editForm.category,
+          })
+          .eq('id', editItem.id);
+        if (error) throw error;
+      }
       toast({ title: 'Updated', description: 'Stock item updated successfully.' });
       setEditItem(null);
       await loadStock();
@@ -256,6 +263,28 @@ export default function StockMovement() {
       toast({ title: 'Error', description: error.message || 'Failed to update stock item.', variant: 'destructive' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (item: StockItem) => {
+    const confirmed = window.confirm('Delete this stock item? This cannot be undone.');
+    if (!confirmed) return;
+    setDeletingId(item.id);
+    try {
+      if (isLocalMode) {
+        await stockApiLocal.remove(item.id);
+      } else {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { error } = await supabase.from('stock_items').delete().eq('id', item.id);
+        if (error) throw error;
+      }
+      toast({ title: 'Deleted', description: 'Stock item removed.' });
+      await loadStock();
+    } catch (error: any) {
+      console.error('[Stock] Delete error:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to delete stock item.', variant: 'destructive' });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -324,6 +353,16 @@ export default function StockMovement() {
                             )}
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)} title="Edit">
                               <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => handleDelete(item)}
+                              title="Delete"
+                              disabled={deletingId === item.id}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>

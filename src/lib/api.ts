@@ -201,6 +201,12 @@ export const stockApi = {
     const data = await localFetch<{ items: any[] }>('/api/stock/deduct', { method: 'POST', body: { items } });
     return data.items;
   },
+  async update(id: string, data: any) {
+    return localFetch<{ item: any }>(`/api/stock/${id}`, { method: 'PUT', body: data });
+  },
+  async remove(id: string) {
+    return localFetch<{ success: boolean }>(`/api/stock/${id}`, { method: 'DELETE' });
+  },
 };
 
 // ──────── Dashboard API ────────

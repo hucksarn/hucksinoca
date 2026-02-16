@@ -111,10 +111,17 @@ db.exec(`
     description TEXT NOT NULL DEFAULT '',
     qty REAL NOT NULL DEFAULT 0,
     unit TEXT DEFAULT '',
+    category TEXT DEFAULT '',
     created_by TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
 `);
+
+// Lightweight migration: ensure stock_items has category column.
+const stockColumns = db.prepare(`PRAGMA table_info(stock_items)`).all().map((col) => col.name);
+if (!stockColumns.includes('category')) {
+  db.exec(`ALTER TABLE stock_items ADD COLUMN category TEXT DEFAULT ''`);
+}
 
 // Helper: generate UUID-like id
 export function newId() {
