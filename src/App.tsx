@@ -12,6 +12,7 @@ import NewRequest from "./pages/NewRequest";
 import Approvals from "./pages/Approvals";
 import Settings from "./pages/Settings";
 import Projects from "./pages/Projects";
+import ProjectApprovedItems from "./pages/ProjectApprovedItems";
 import Stock from "./pages/Stock";
 import StockMovement from "./pages/StockMovement";
 import Auth from "./pages/Auth";
@@ -79,6 +80,7 @@ function AppRoutes() {
       <Route path="/requests/new" element={<ProtectedRoute><NewRequest /></ProtectedRoute>} />
       <Route path="/approvals" element={<AdminRoute><Approvals /></AdminRoute>} />
       <Route path="/projects" element={<AdminRoute><Projects /></AdminRoute>} />
+      <Route path="/projects/:id/approved" element={<AdminRoute><ProjectApprovedItems /></AdminRoute>} />
       <Route path="/stock" element={<AdminRoute><Stock /></AdminRoute>} />
       <Route path="/stock-movement" element={<AdminRoute><StockMovement /></AdminRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
