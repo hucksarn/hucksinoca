@@ -10,6 +10,7 @@
 
 const API_MODE = import.meta.env.VITE_API_MODE || 'cloud'; // 'cloud' | 'local'
 const API_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE = API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
 export const isLocalMode = API_MODE === 'local';
 
@@ -47,7 +48,7 @@ async function localFetch<T = any>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: options.method || 'GET',
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
