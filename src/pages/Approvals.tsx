@@ -71,7 +71,13 @@ export default function Approvals() {
       if (actionType === 'approve') {
         if (requestType === 'stock_request') {
           const itemsToDeduct = (requestItems[selectedRequest.id] || []).map((item) => ({
-            item: item.name, description: item.specification || item.name, qty: item.quantity, unit: item.unit, category: item.category, request_id: selectedRequest.id,
+            item: item.name,
+            description: item.specification || item.name,
+            qty: item.quantity,
+            unit: item.unit,
+            category: item.category,
+            request_id: selectedRequest.id,
+            source: 'approval',
           }));
 
           if (itemsToDeduct.length > 0) {

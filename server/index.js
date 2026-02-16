@@ -302,14 +302,14 @@ app.delete('/api/requests/:id', authMiddleware, (req, res) => {
   const shouldReturnToStock = request.status === 'approved' && request.request_type === 'stock_request';
   if (shouldReturnToStock && items.length > 0) {
     const today = new Date().toISOString().slice(0, 10);
-    const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, category, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, category, source, request_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     const insertMany = db.transaction((rows) => {
       for (const row of rows) {
         const item = row.name || row.specification || '';
         const description = row.specification || row.name || '';
         const unit = (row.unit || '').toLowerCase();
         const category = row.category || '';
-        stmt.run(newId(), today, item, description, Number(row.quantity) || 0, unit, category, req.user.id);
+        stmt.run(newId(), today, item, description, Number(row.quantity) || 0, unit, category, 'return', req.params.id, req.user.id);
       }
     });
     insertMany(items);
@@ -369,13 +369,15 @@ app.post('/api/stock', authMiddleware, adminOnly, (req, res) => {
   if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
 
   const today = new Date().toISOString().slice(0, 10);
-  const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, category, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, category, source, request_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   const insertMany = db.transaction((rows) => {
     for (const row of rows) {
       const item = row.item || row.description || '';
       const unit = (row.unit || '').toLowerCase();
       const category = row.category || '';
-      stmt.run(newId(), row.date || today, item, row.description || '', Number(row.qty) || 0, unit, category, req.user.id);
+      const source = row.source || 'manual';
+      const requestId = row.request_id || null;
+      stmt.run(newId(), row.date || today, item, row.description || '', Number(row.qty) || 0, unit, category, source, requestId, req.user.id);
     }
   });
   insertMany(items);
@@ -389,13 +391,15 @@ app.post('/api/stock/deduct', authMiddleware, adminOnly, (req, res) => {
   if (!Array.isArray(items)) return res.status(400).json({ error: 'items must be an array' });
 
   const today = new Date().toISOString().slice(0, 10);
-  const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, category, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, category, source, request_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   const deductMany = db.transaction((rows) => {
     for (const row of rows) {
       const item = row.item || row.description || '';
       const unit = (row.unit || '').toLowerCase();
       const category = row.category || '';
-      stmt.run(newId(), row.date || today, item, row.description || '', -Math.abs(Number(row.qty) || 0), unit, category, req.user.id);
+      const source = row.source || 'approval';
+      const requestId = row.request_id || null;
+      stmt.run(newId(), row.date || today, item, row.description || '', -Math.abs(Number(row.qty) || 0), unit, category, source, requestId, req.user.id);
     }
   });
   deductMany(items);
@@ -407,6 +411,7 @@ app.post('/api/stock/deduct', authMiddleware, adminOnly, (req, res) => {
 app.put('/api/stock/:id', authMiddleware, adminOnly, (req, res) => {
   const { id } = req.params;
   const { date, item, description, qty, unit, category } = req.body || {};
+  const { source, request_id } = req.body || {};
   const row = db.prepare('SELECT id FROM stock_items WHERE id = ?').get(id);
   if (!row) return res.status(404).json({ error: 'Stock item not found' });
 
@@ -416,7 +421,9 @@ app.put('/api/stock/:id', authMiddleware, adminOnly, (req, res) => {
                   description = COALESCE(?, description),
                   qty = COALESCE(?, qty),
                   unit = COALESCE(?, unit),
-                  category = COALESCE(?, category)
+                  category = COALESCE(?, category),
+                  source = COALESCE(?, source),
+                  request_id = COALESCE(?, request_id)
               WHERE id = ?`)
     .run(
       date ?? null,
@@ -425,6 +432,8 @@ app.put('/api/stock/:id', authMiddleware, adminOnly, (req, res) => {
       typeof qty === 'number' ? qty : qty != null ? Number(qty) : null,
       unit ? String(unit).toLowerCase() : null,
       category ?? null,
+      source ?? null,
+      request_id ?? null,
       id,
     );
 

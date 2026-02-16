@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Plus, Upload, Loader2, Trash2, Pencil, ChevronDown, ChevronRight, User, Building2, FileText } from 'lucide-react';
+import { Plus, Upload, Loader2, Trash2, Pencil, ChevronDown, ChevronRight, User, Building2, FileText, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isLocalMode, stockApi as stockApiLocal } from '@/lib/api';
 import { useMaterialCategories } from '@/hooks/useDatabase';
@@ -26,6 +26,7 @@ type StockItem = {
   qty: number;
   unit: string;
   category: string;
+  source?: string;
   request_id?: string | null;
 };
 
@@ -36,6 +37,7 @@ type UploadRow = {
   qty: number;
   unit: string;
   category: string;
+  source?: string;
 };
 
 async function stockApiFetch(method: 'GET' | 'POST', body?: any) {
@@ -177,14 +179,15 @@ export default function StockMovement() {
     }
   };
 
-  const handleImportRows = async (rows: UploadRow[]) => {
+  const handleImportRows = async (rows: UploadRow[], source: 'manual' | 'upload') => {
     if (rows.length === 0) {
       toast({ title: 'No Data', description: 'Add at least one stock row.', variant: 'destructive' });
       return;
     }
     setUploading(true);
     try {
-      const data = await stockApiFetch('POST', { items: rows });
+      const payload = rows.map((row) => ({ ...row, source }));
+      const data = await stockApiFetch('POST', { items: payload });
       setStockItems(Array.isArray(data.items) ? data.items : []);
       setUploadRows([]);
       setManualRows([{ id: `manual_${Date.now()}`, item: '', description: '', qty: 0, unit: '', category: '' }]);
@@ -213,7 +216,7 @@ export default function StockMovement() {
     const cleaned = manualRows
       .map((row) => ({ ...row, item: row.item.trim(), description: row.description.trim(), unit: row.unit.trim() }))
       .filter((row) => row.description.length > 0);
-    void handleImportRows(cleaned);
+    void handleImportRows(cleaned, 'manual');
   };
 
   const hasManualRows = manualRows.some((row) => row.description.trim().length > 0);
@@ -315,6 +318,7 @@ export default function StockMovement() {
                 <TableHead>Item</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead className="w-16">Actions</TableHead>
@@ -323,7 +327,7 @@ export default function StockMovement() {
             <TableBody>
               {stockItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     No stock transactions yet.
                   </TableCell>
                 </TableRow>
@@ -333,6 +337,13 @@ export default function StockMovement() {
                   const hasDetails = isOutgoing && item.request_id && requestDetails[item.request_id];
                   const details = item.request_id ? requestDetails[item.request_id] : null;
                   const isExpanded = expandedRows.has(item.id);
+                  const sourceLabel = item.source === 'return'
+                    ? 'Return'
+                    : item.source === 'approval'
+                      ? 'Approval'
+                      : item.source === 'upload'
+                        ? 'Upload'
+                        : 'Manual';
 
                   return (
                     <>
@@ -342,6 +353,7 @@ export default function StockMovement() {
                         <TableCell>{item.item || `Item ${index + 1}`}</TableCell>
                         <TableCell className="font-medium">{item.description}</TableCell>
                         <TableCell className="text-xs">{item.category || '—'}</TableCell>
+                        <TableCell className="text-xs">{sourceLabel}</TableCell>
                         <TableCell className={isOutgoing ? 'text-destructive font-medium' : ''}>{item.qty}</TableCell>
                         <TableCell>{item.unit}</TableCell>
                         <TableCell>
@@ -557,7 +569,7 @@ export default function StockMovement() {
                   Save Stock
                 </Button>
               ) : (
-                <Button variant="accent" onClick={() => handleImportRows(uploadRows)} disabled={uploading || uploadRows.length === 0} className="gap-2">
+                <Button variant="accent" onClick={() => handleImportRows(uploadRows, 'upload')} disabled={uploading || uploadRows.length === 0} className="gap-2">
                   {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
                   Import {uploadRows.length} Rows
                 </Button>

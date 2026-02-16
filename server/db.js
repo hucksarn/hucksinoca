@@ -112,6 +112,8 @@ db.exec(`
     qty REAL NOT NULL DEFAULT 0,
     unit TEXT DEFAULT '',
     category TEXT DEFAULT '',
+    source TEXT DEFAULT '',
+    request_id TEXT,
     created_by TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
@@ -121,6 +123,12 @@ db.exec(`
 const stockColumns = db.prepare(`PRAGMA table_info(stock_items)`).all().map((col) => col.name);
 if (!stockColumns.includes('category')) {
   db.exec(`ALTER TABLE stock_items ADD COLUMN category TEXT DEFAULT ''`);
+}
+if (!stockColumns.includes('source')) {
+  db.exec(`ALTER TABLE stock_items ADD COLUMN source TEXT DEFAULT ''`);
+}
+if (!stockColumns.includes('request_id')) {
+  db.exec(`ALTER TABLE stock_items ADD COLUMN request_id TEXT`);
 }
 
 // Helper: generate UUID-like id
