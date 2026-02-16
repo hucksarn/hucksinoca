@@ -297,6 +297,25 @@ app.delete('/api/requests/:id', authMiddleware, (req, res) => {
   if (req.user.role !== 'admin' && request.requester_id !== req.user.id) {
     return res.status(403).json({ error: 'Forbidden' });
   }
+
+  const items = db.prepare('SELECT * FROM material_request_items WHERE request_id = ?').all(req.params.id);
+  const shouldReturnToStock = request.status === 'approved' && request.request_type === 'stock_request';
+  if (shouldReturnToStock && items.length > 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    const stmt = db.prepare('INSERT INTO stock_items (id, date, item, description, qty, unit, category, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    const insertMany = db.transaction((rows) => {
+      for (const row of rows) {
+        const item = row.name || row.specification || '';
+        const description = row.specification || row.name || '';
+        const unit = (row.unit || '').toLowerCase();
+        const category = row.category || '';
+        stmt.run(newId(), today, item, description, Number(row.quantity) || 0, unit, category, req.user.id);
+      }
+    });
+    insertMany(items);
+  }
+
+  db.prepare('DELETE FROM approvals WHERE request_id = ?').run(req.params.id);
   db.prepare('DELETE FROM material_request_items WHERE request_id = ?').run(req.params.id);
   db.prepare('DELETE FROM material_requests WHERE id = ?').run(req.params.id);
   res.json({ success: true });

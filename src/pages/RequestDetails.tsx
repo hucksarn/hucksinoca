@@ -63,10 +63,10 @@ const RequestDetails = () => {
 
   const request = requests?.find(r => r.id === id);
   
-  // System Admin can delete any request
+  // Admin can delete any request
   // Regular users can delete their own draft/submitted requests
   const canDelete = request && (
-    (isAdmin && profile?.designation === 'System Admin') ||
+    isAdmin ||
     (request.requester_id === user?.id && ['draft', 'submitted'].includes(request.status))
   );
 
