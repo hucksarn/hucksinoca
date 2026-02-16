@@ -166,7 +166,8 @@ app.get('/api/projects/:id/approved-items', authMiddleware, adminOnly, (req, res
       mri.unit,
       mri.preferred_brand,
       mr.request_number,
-      mr.created_at
+      mr.created_at,
+      (SELECT MAX(a.created_at) FROM approvals a WHERE a.request_id = mr.id AND a.action = 'approved') as approved_at
     FROM material_request_items mri
     JOIN material_requests mr ON mri.request_id = mr.id
     WHERE mr.project_id = ? AND mr.status = 'approved'

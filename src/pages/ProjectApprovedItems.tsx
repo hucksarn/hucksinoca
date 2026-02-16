@@ -29,7 +29,7 @@ export default function ProjectApprovedItems() {
           const { supabase } = await import('@/integrations/supabase/client');
           const { data, error } = await supabase
             .from('material_requests')
-            .select('id, request_number, created_at, material_request_items(*)')
+            .select('id, request_number, created_at, approvals(created_at, action), material_request_items(*)')
             .eq('project_id', id)
             .eq('status', 'approved');
           if (error) throw error;
@@ -38,6 +38,10 @@ export default function ProjectApprovedItems() {
               ...it,
               request_number: r.request_number,
               created_at: r.created_at,
+              approved_at: (r.approvals || []).filter((a: any) => a.action === 'approved')
+                .map((a: any) => a.created_at)
+                .sort()
+                .slice(-1)[0],
             })),
           );
           setItems(flat);
@@ -64,6 +68,8 @@ export default function ProjectApprovedItems() {
             <TableHeader>
               <TableRow>
                 <TableHead>Request</TableHead>
+                <TableHead>Requested</TableHead>
+                <TableHead>Approved</TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Qty</TableHead>
@@ -74,7 +80,7 @@ export default function ProjectApprovedItems() {
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     No approved items for this project.
                   </TableCell>
                 </TableRow>
@@ -82,6 +88,8 @@ export default function ProjectApprovedItems() {
                 items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="text-xs">{item.request_number || '-'}</TableCell>
+                    <TableCell className="text-xs">{item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell className="text-xs">{item.approved_at ? new Date(item.approved_at).toLocaleDateString() : '-'}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{item.specification || '-'}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
